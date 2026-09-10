@@ -1,0 +1,532 @@
+// ElectIQ — Sprint 1: Platform Foundation schema
+// Establishes auth, RBAC, geographic scoping, audit, and a minimal
+// election/geography backbone that later sprints extend (never redesigned).
+
+// Prisma ORM v7 default: the Rust-free TypeScript/WASM query compiler.
+// No native binary is downloaded — the compiler ships inside the
+// @prisma/client npm package — and database connectivity goes through
+// the driver adapter configured in src/lib/db.ts (@prisma/adapter-pg).
+generator client {
+  provider   = "prisma-client"
+  engineType = "client"
+  output     = "../src/generated/prisma"
+}
+
+// Prisma ORM v7: the connection URL lives in prisma.config.ts, not here.
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// IDENTITY, ROLES & PERMISSIONS
+// ─────────────────────────────────────────────────────────────────────────
+
+enum RoleName {
+  SUPER_ADMIN
+  ELECTION_COMMISSIONER
+  NATIONAL_RETURNING_OFFICER
+  REGIONAL_OFFICER
+  CONSTITUENCY_OFFICER
+  POLLING_OFFICER
+  OBSERVER
+  ANALYST
+  MEDIA_USER
+  AUDITOR
+  PARTY_AGENT
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  name              String
+  passwordHash      String
+  isActive          Boolean  @default(true)
+  failedLoginCount  Int      @default(0)
+  lockedUntil       DateTime?
+  lastLoginAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  roles             UserRole[]
+  scopes            UserScope[]
+  auditLogs         AuditLog[]
+  importJobs        ImportJob[]
+  submittedResults  ResultSubmission[]     @relation("ResultSubmitter")
+  verifications     ResultVerification[]   @relation("ResultVerifier")
+  uploadedDocuments ResultDocument[]       @relation("ResultDocumentUploader")
+
+  @@map("users")
+}
+
+// A named role, e.g. REGIONAL_OFFICER. Permissions are attached to roles.
+model Role {
+  id          String   @id @default(cuid())
+  name        RoleName @unique
+  description String
+
+  permissions RolePermission[]
+  userRoles   UserRole[]
+
+  @@map("roles")
+}
+
+// A permission is (resource, action). Example: resource="results", action="verify".
+// Whether it applies nationally or only within scope is resolved at query time
+// using the user's UserScope rows, not baked into the permission itself.
+model Permission {
+  id       String @id @default(cuid())
+  resource String
+  action   String
+  description String
+
+  rolePermissions RolePermission[]
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String @id @default(cuid())
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+// Geographic scoping. A user with a national scope has scopeUnitId = null,
+// scopeLevel = null and isNational = true. Otherwise their access is
+// constrained to the given AdministrativeUnit and everything under it.
+model UserScope {
+  id            String            @id @default(cuid())
+  userId        String
+  isNational    Boolean           @default(false)
+  scopeUnitId   String?
+  createdAt     DateTime          @default(now())
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scopeUnit  AdministrativeUnit? @relation(fields: [scopeUnitId], references: [id])
+
+  @@map("user_scopes")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// COUNTRY / GEOGRAPHY (multi-country, configurable hierarchy — never hardcoded)
+// ─────────────────────────────────────────────────────────────────────────
+
+model Country {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isoCode   String   @unique
+  createdAt DateTime @default(now())
+
+  levels     AdministrativeLevel[]
+  elections  Election[]
+
+  @@map("countries")
+}
+
+// Defines the ordered hierarchy for a country, e.g.:
+// depth 0 = Region, depth 1 = Constituency, depth 2 = Ward, depth 3 = Polling Center
+model AdministrativeLevel {
+  id        String  @id @default(cuid())
+  countryId String
+  name      String
+  depth     Int
+
+  country Country              @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  units   AdministrativeUnit[]
+
+  @@unique([countryId, depth])
+  @@map("administrative_levels")
+}
+
+model AdministrativeUnit {
+  id        String   @id @default(cuid())
+  levelId   String
+  parentId  String?
+  name      String
+  code      String
+  createdAt DateTime @default(now())
+
+  // Administrative boundary polygon (Section 15: GIS must support
+  // administrative boundaries). Stored as a true PostGIS geometry rather
+  // than GeoJSON text so it can be indexed (GiST) and queried spatially.
+  // Prisma's client can't hydrate `Unsupported` columns directly — all
+  // reads/writes go through src/lib/gis.ts using $queryRaw / $executeRaw.
+  boundary  Unsupported("geometry(MultiPolygon, 4326)")?
+
+  level    AdministrativeLevel  @relation(fields: [levelId], references: [id])
+  parent   AdministrativeUnit?  @relation("UnitHierarchy", fields: [parentId], references: [id])
+  children AdministrativeUnit[] @relation("UnitHierarchy")
+
+  pollingCenters PollingCenter[]
+  userScopes     UserScope[]
+  importErrors   ImportError[]
+
+  @@unique([levelId, code])
+  @@map("administrative_units")
+}
+
+model PollingCenter {
+  id        String   @id @default(cuid())
+  unitId    String
+  name      String
+  code      String   @unique
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime @default(now())
+
+  // Mirrors latitude/longitude as a real PostGIS point so it can be
+  // indexed and used in spatial queries (e.g. "polling centers within a
+  // ward's boundary"). See src/lib/gis.ts.
+  location  Unsupported("geography(Point, 4326)")?
+
+  unit     AdministrativeUnit @relation(fields: [unitId], references: [id])
+  stations PollingStation[]
+
+  @@map("polling_centers")
+}
+
+model PollingStation {
+  id                String   @id @default(cuid())
+  pollingCenterId   String
+  name              String
+  code              String   @unique
+  registeredVoters  Int      @default(0)
+  createdAt         DateTime @default(now())
+
+  pollingCenter PollingCenter @relation(fields: [pollingCenterId], references: [id])
+  resultSubmissions ResultSubmission[]
+
+  @@map("polling_stations")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// BULK IMPORT (Section 21: upload → parse → validate → preview → error
+// report → confirm → import → audit — never silently discard invalid rows)
+// ─────────────────────────────────────────────────────────────────────────
+
+enum ImportEntityType {
+  POLLING_STATIONS
+}
+
+enum ImportStatus {
+  PENDING_CONFIRMATION
+  IMPORTED
+  FAILED
+  CANCELLED
+}
+
+model ImportJob {
+  id           String           @id @default(cuid())
+  entityType   ImportEntityType
+  status       ImportStatus     @default(PENDING_CONFIRMATION)
+  fileName     String
+  totalRows    Int
+  validRows    Int
+  errorRows    Int
+  // Parsed rows (both valid and invalid) captured at upload time, so the
+  // confirm step applies exactly what the person previewed rather than
+  // re-parsing a re-uploaded file that could have changed in between.
+  rawRows      Json
+  createdById  String?
+  createdAt    DateTime         @default(now())
+  completedAt  DateTime?
+
+  createdBy User?         @relation(fields: [createdById], references: [id])
+  errors    ImportError[]
+
+  @@map("import_jobs")
+}
+
+model ImportError {
+  id          String   @id @default(cuid())
+  importJobId String
+  rowNumber   Int
+  columnName  String?
+  message     String
+  rawRow      Json
+  unitId      String?
+
+  importJob ImportJob           @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+  unit      AdministrativeUnit? @relation(fields: [unitId], references: [id])
+
+  @@map("import_errors")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// ELECTION FOUNDATION (structure only — full workflow arrives in Sprint 3)
+// ─────────────────────────────────────────────────────────────────────────
+
+enum ElectionStatus {
+  DRAFT
+  CONFIGURED
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+model Election {
+  id          String         @id @default(cuid())
+  countryId   String
+  name        String
+  electionDate DateTime
+  status      ElectionStatus @default(DRAFT)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  country   Country            @relation(fields: [countryId], references: [id])
+  positions ElectionPosition[]
+  parties   Party[]
+  candidates Candidate[]
+  resultSubmissions ResultSubmission[]
+
+  @@map("elections")
+}
+
+model ElectionPosition {
+  id         String @id @default(cuid())
+  electionId String
+  name       String
+
+  election   Election    @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  candidates Candidate[]
+  resultSubmissions ResultSubmission[]
+
+  @@unique([electionId, name])
+  @@map("election_positions")
+}
+
+model Party {
+  id         String @id @default(cuid())
+  electionId String
+  name       String
+  abbreviation String
+  colorHex   String?
+
+  election   Election    @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  candidates Candidate[]
+
+  @@unique([electionId, abbreviation])
+  @@map("parties")
+}
+
+model Candidate {
+  id         String  @id @default(cuid())
+  electionId String
+  positionId String
+  partyId    String?
+  fullName   String
+
+  election Election         @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  position ElectionPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  party    Party?           @relation(fields: [partyId], references: [id])
+  results  CandidateResult[]
+
+  @@map("candidates")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// RESULTS ENGINE (Sprint 3)
+//
+// A "result" for a given (election, position, polling station) is not one
+// row that gets edited in place — it's a chain of ResultSubmission rows.
+// Submitting a correction creates a new row with version = previous + 1 and
+// previousVersionId pointing at the row it supersedes (Section 3: "every
+// correction creates a new version... store version, previous_version_id,
+// changed_by, change_reason, timestamp"). Nothing is ever overwritten.
+//
+// Aggregation (Section 12) must only ever read PUBLISHED rows for official
+// totals — never DRAFT/SUBMITTED/VALIDATION_FAILED/AWAITING_REVIEW ones.
+// ─────────────────────────────────────────────────────────────────────────
+
+enum ResultStatus {
+  DRAFT
+  SUBMITTED
+  VALIDATION_FAILED
+  AWAITING_REVIEW
+  VERIFIED
+  FLAGGED
+  DISPUTED
+  CORRECTED
+  APPROVED
+  PUBLISHED
+}
+
+enum VerificationDecision {
+  VERIFIED
+  FLAGGED
+  DISPUTED
+}
+
+model ResultSubmission {
+  id                String       @id @default(cuid())
+  electionId        String
+  positionId        String
+  pollingStationId  String
+  submittedById     String?
+  version           Int          @default(1)
+  previousVersionId String?      @unique
+  status            ResultStatus @default(DRAFT)
+
+  registeredVoters Int
+  ballotsIssued    Int
+  votesCast        Int
+  validVotes       Int
+  rejectedBallots  Int
+
+  // Captured at submission time per Section 3 ("GPS"). Optional — a
+  // submission is never blocked on device GPS being unavailable.
+  gpsLatitude  Float?
+  gpsLongitude Float?
+
+  changeReason     String?
+  validationErrors Json?
+
+  submittedAt DateTime?
+  verifiedAt  DateTime?
+  approvedAt  DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  election       Election           @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  position       ElectionPosition   @relation(fields: [positionId], references: [id])
+  pollingStation PollingStation     @relation(fields: [pollingStationId], references: [id])
+  submittedBy    User?              @relation("ResultSubmitter", fields: [submittedById], references: [id])
+  previousVersion ResultSubmission? @relation("VersionChain", fields: [previousVersionId], references: [id])
+  nextVersion     ResultSubmission? @relation("VersionChain")
+
+  candidateResults CandidateResult[]
+  verifications    ResultVerification[]
+  documents        ResultDocument[]
+
+  // One row per (election, position, polling station, version) — not a
+  // hard uniqueness on the triple alone, since multiple versions must
+  // coexist as history.
+  @@unique([electionId, positionId, pollingStationId, version])
+  @@index([electionId, positionId, pollingStationId, status])
+  @@map("result_submissions")
+}
+
+model CandidateResult {
+  id           String @id @default(cuid())
+  submissionId String
+  candidateId  String
+  votes        Int
+
+  submission ResultSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  candidate  Candidate        @relation(fields: [candidateId], references: [id])
+
+  @@unique([submissionId, candidateId])
+  @@map("candidate_results")
+}
+
+model ResultVerification {
+  id           String               @id @default(cuid())
+  submissionId String
+  verifierId   String?
+  decision     VerificationDecision
+  notes        String?
+  createdAt    DateTime             @default(now())
+
+  submission ResultSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  verifier   User?            @relation("ResultVerifier", fields: [verifierId], references: [id])
+
+  @@index([submissionId, createdAt])
+  @@map("result_verifications")
+}
+
+// Evidence Vault (Section 13) for result forms. File bytes are stored in
+// Postgres for now behind the same interface a future S3-compatible swap
+// would use — see src/lib/evidence.ts — never relying on filename as
+// evidence identity, always a computed SHA-256.
+model ResultDocument {
+  id           String   @id @default(cuid())
+  submissionId String
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
+  sha256       String
+  content      Bytes
+  uploadedById String?
+  uploadedAt   DateTime @default(now())
+
+  submission ResultSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  uploadedBy User?            @relation("ResultDocumentUploader", fields: [uploadedById], references: [id])
+
+  @@index([submissionId])
+  @@map("result_documents")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// AUDIT FOUNDATION
+// ─────────────────────────────────────────────────────────────────────────
+
+enum AuditAction {
+  LOGIN
+  LOGOUT
+  LOGIN_FAILED
+  ACCOUNT_LOCKED
+  USER_CREATED
+  ROLE_ASSIGNED
+  PERMISSION_DENIED
+  ELECTION_CREATED
+  ELECTION_UPDATED
+  POSITION_CREATED
+  PARTY_CREATED
+  PARTY_UPDATED
+  CANDIDATE_CREATED
+  CANDIDATE_UPDATED
+  CANDIDATE_DELETED
+  ADMINISTRATIVE_UNIT_CREATED
+  POLLING_CENTER_CREATED
+  POLLING_STATION_CREATED
+  IMPORT_STARTED
+  IMPORT_CONFIRMED
+  IMPORT_CANCELLED
+  RESULT_SUBMITTED
+  RESULT_VALIDATION_FAILED
+  RESULT_VERIFIED
+  RESULT_FLAGGED
+  RESULT_DISPUTED
+  RESULT_APPROVED
+  RESULT_PUBLISHED
+  RESULT_DOCUMENT_UPLOADED
+}
+
+model AuditLog {
+  id            String      @id @default(cuid())
+  actorId       String?
+  action        AuditAction
+  entityType    String?
+  entityId      String?
+  ipAddress     String?
+  previousState Json?
+  newState      Json?
+  reason        String?
+  createdAt     DateTime    @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
