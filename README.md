@@ -283,6 +283,20 @@ never a fraud determination, per Section 2. Reviewers with
 `integrity.review` (scoped to their geography) can claim, resolve, or
 dismiss an alert; every transition is audited.
 
+## Field Operations (Sprint 6)
+
+`/command-center/field` shows observers their own assignments (accept →
+check in → submit reports) and gives `field.manage` roles an assignment
+console. Authorization here is assignment-based, not the administrative-
+unit scoping used elsewhere — an observer only ever acts on the specific
+station(s) they're assigned to, checked via `loadOwnAssignment()`.
+`/command-center/incidents` handles incident reporting and review
+(acknowledge/resolve/dismiss), geographically scoped like results and
+integrity alerts. Field reports use a real (if scope-limited — see
+`SPRINT_06.md`) offline queue: `src/lib/field/offline-queue.ts` persists
+unsent reports in localStorage with an idempotency key, auto-syncing
+when connectivity returns.
+
 ## Testing
 
 ```bash
@@ -292,12 +306,13 @@ npm test
 
 `tests/rbac.test.ts`, `tests/import.test.ts`, `tests/audit.test.ts`,
 `tests/results-validation.test.ts`, `tests/results-aggregation.test.ts`,
-`tests/command-center.test.ts`, and `tests/integrity.test.ts` are
-integration tests against a real seeded Postgres database (not mocks),
-because the thing worth testing here is whether the actual Prisma
-queries, validation logic, and rule evaluations behave correctly against
-real data — a mock would not have caught a mistake in any of them. All 39
-pass against a live database as of Sprint 5.
+`tests/command-center.test.ts`, `tests/integrity.test.ts`, and
+`tests/field.test.ts` are integration tests against a real seeded
+Postgres database (not mocks), because the thing worth testing here is
+whether the actual Prisma queries, validation logic, and rule
+evaluations behave correctly against real data — a mock would not have
+caught a mistake in any of them. All 42 pass against a live database as
+of Sprint 6.
 
 ## Docker
 
@@ -366,12 +381,12 @@ Sprint 2 items:
 
 ## Current sprint
 
-Sprint 5 — Election Integrity. See `SPRINT_05.md` for the detailed
-objective, scope, and verification record (Sprints 1–4's records are in
-`SPRINT_01.md` through `SPRINT_04.md`).
+Sprint 6 — Field Operations. See `SPRINT_06.md` for the detailed
+objective, scope, and verification record (Sprints 1–5's records are in
+`SPRINT_01.md` through `SPRINT_05.md`).
 
 ## Next sprint
 
-Sprint 6 — Field Operations: observer assignments, polling-station
-check-in, opening/turnout/counting/closing reports, incident reporting,
-and offline-first field capture.
+Sprint 7 — ElectIQ Copilot: permission-aware AI election intelligence
+with structured tools (ResultsTool, TurnoutTool, IncidentTool,
+IntegrityTool, and more), grounded in the real data this app now holds.

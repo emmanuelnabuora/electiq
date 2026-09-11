@@ -56,9 +56,9 @@ const sections: NavSection[] = [
   {
     title: "Operations",
     items: [
-      { label: "Incidents", icon: ShieldAlert, sprint: 6 },
-      { label: "Observers", icon: Eye, sprint: 6 },
-      { label: "Field Reports", icon: ClipboardList, sprint: 6 },
+      { label: "Incidents", href: "/command-center/incidents", icon: ShieldAlert },
+      { label: "Observers", href: "/command-center/field", icon: Eye },
+      { label: "Field Reports", href: "/command-center/field", icon: ClipboardList },
     ],
   },
   {

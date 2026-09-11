@@ -38,6 +38,10 @@ const PERMISSIONS: Array<{ resource: string; action: string; description: string
   { resource: "geography", action: "manage", description: "Manage administrative units, polling centers/stations, and bulk import" },
   { resource: "integrity", action: "read", description: "View integrity alerts" },
   { resource: "integrity", action: "review", description: "Assign, resolve, or dismiss integrity alerts" },
+  { resource: "field", action: "manage", description: "Assign observers to polling stations" },
+  { resource: "field", action: "checkin", description: "Accept an assignment and check in at a polling station" },
+  { resource: "field", action: "report", description: "Submit field reports and turnout snapshots" },
+  { resource: "incidents", action: "review", description: "Acknowledge, resolve, or dismiss reported incidents" },
 ];
 
 const ROLE_DEFINITIONS: Record<RoleName, { description: string; permissions: Array<[string, string]> }> = {
@@ -51,6 +55,7 @@ const ROLE_DEFINITIONS: Record<RoleName, { description: string; permissions: Arr
       ["elections", "read"], ["elections", "create"], ["elections", "update"],
       ["results", "read"], ["results", "approve"], ["results", "publish"],
       ["audit", "read"], ["geography", "manage"], ["integrity", "read"], ["integrity", "review"],
+      ["field", "manage"], ["incidents", "read"], ["incidents", "review"],
     ],
   },
   NATIONAL_RETURNING_OFFICER: {
@@ -58,15 +63,22 @@ const ROLE_DEFINITIONS: Record<RoleName, { description: string; permissions: Arr
     permissions: [
       ["elections", "read"], ["results", "read"], ["results", "verify"], ["results", "approve"],
       ["audit", "read"], ["integrity", "read"], ["integrity", "review"],
+      ["incidents", "read"], ["incidents", "review"],
     ],
   },
   REGIONAL_OFFICER: {
     description: "Regional oversight of results and reporting progress.",
-    permissions: [["elections", "read"], ["results", "read"], ["results", "verify"], ["integrity", "read"], ["integrity", "review"]],
+    permissions: [
+      ["elections", "read"], ["results", "read"], ["results", "verify"],
+      ["integrity", "read"], ["integrity", "review"], ["incidents", "read"], ["incidents", "review"],
+    ],
   },
   CONSTITUENCY_OFFICER: {
     description: "Constituency-level verification of polling-station results.",
-    permissions: [["elections", "read"], ["results", "read"], ["results", "verify"], ["integrity", "read"], ["integrity", "review"]],
+    permissions: [
+      ["elections", "read"], ["results", "read"], ["results", "verify"],
+      ["integrity", "read"], ["integrity", "review"], ["incidents", "read"], ["incidents", "review"],
+    ],
   },
   POLLING_OFFICER: {
     description: "Submits results for an assigned polling station.",
@@ -74,7 +86,10 @@ const ROLE_DEFINITIONS: Record<RoleName, { description: string; permissions: Arr
   },
   OBSERVER: {
     description: "Field observation and incident reporting within an assigned area.",
-    permissions: [["elections", "read"], ["incidents", "create"], ["incidents", "read"]],
+    permissions: [
+      ["elections", "read"], ["incidents", "create"], ["incidents", "read"],
+      ["field", "checkin"], ["field", "report"],
+    ],
   },
   ANALYST: {
     description: "Read-only access to analytics and results data.",
@@ -391,12 +406,36 @@ async function main() {
 
   const demoUsers = await seedUsers(roles, firstRegion.id, firstConstituency.id);
 
+  // Give the demo observer a real accreditation profile and an assignment
+  // to an actual polling station, so Sprint 6's field operations flow has
+  // something real to check in against out of the box.
+  const observerUser = await db.user.findUniqueOrThrow({ where: { email: "observer@electiq.example" } });
+  const observer = await db.observer.upsert({
+    where: { userId: observerUser.id },
+    update: {},
+    create: {
+      userId: observerUser.id,
+      organization: "Karibu Civic Transparency Coalition",
+      accreditationNumber: "KCTC-2026-0001",
+      phone: "+254-700-000-000",
+    },
+  });
+  const firstStation = await db.pollingStation.findFirstOrThrow({
+    orderBy: { code: "asc" },
+  });
+  await db.observerAssignment.upsert({
+    where: { observerId_pollingStationId: { observerId: observer.id, pollingStationId: firstStation.id } },
+    update: {},
+    create: { observerId: observer.id, pollingStationId: firstStation.id },
+  });
+
   console.log("Seed complete.");
   console.log(`  Country: ${country.name}`);
   console.log(`  Election: ${election.name} (${election.status})`);
   console.log(`  Polling stations: ${geography.stationCount}, registered voters: ${geography.voterTotal}`);
   console.log(`  Roles seeded: ${Object.keys(roles).length}`);
   console.log(`  Demo users: ${demoUsers.length} (password for all: ${DEMO_PASSWORD})`);
+  console.log(`  Observer assignment: ${observerUser.email} -> ${firstStation.code}`);
 }
 
 main()

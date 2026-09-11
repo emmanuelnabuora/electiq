@@ -55,6 +55,9 @@ model User {
   verifications     ResultVerification[]   @relation("ResultVerifier")
   uploadedDocuments ResultDocument[]       @relation("ResultDocumentUploader")
   assignedAlerts    IntegrityAlert[]       @relation("IntegrityAlertAssignee")
+  observerProfile   Observer?
+  reportedIncidents Incident[]             @relation("IncidentReporter")
+  uploadedIncidentEvidence IncidentEvidence[] @relation("IncidentEvidenceUploader")
 
   @@map("users")
 }
@@ -215,6 +218,9 @@ model PollingStation {
 
   pollingCenter PollingCenter @relation(fields: [pollingCenterId], references: [id])
   resultSubmissions ResultSubmission[]
+  observerAssignments ObserverAssignment[]
+  turnoutSnapshots TurnoutSnapshot[]
+  incidents Incident[]
 
   @@map("polling_stations")
 }
@@ -298,6 +304,9 @@ model Election {
   parties   Party[]
   candidates Candidate[]
   resultSubmissions ResultSubmission[]
+  fieldReports FieldReport[]
+  turnoutSnapshots TurnoutSnapshot[]
+  incidents Incident[]
 
   @@map("elections")
 }
@@ -540,6 +549,171 @@ model IntegrityAlert {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// FIELD OPERATIONS (Sprint 6)
+//
+// Observers are Users with the OBSERVER role; this model holds their
+// accreditation profile. Authorization for check-in and field reports is
+// assignment-based (does this observer have an assignment for *this*
+// polling station?), not the coarser administrative-unit UserScope used
+// elsewhere — a sharper mechanism for a role whose whole job is one
+// specific station. See src/lib/field/scope.ts.
+// ─────────────────────────────────────────────────────────────────────────
+
+enum FieldAssignmentStatus {
+  ASSIGNED
+  ACCEPTED
+  CHECKED_IN
+  COMPLETED
+  CANCELLED
+}
+
+enum FieldReportType {
+  OPENING
+  TURNOUT
+  COUNTING
+  CLOSING
+  GENERAL
+}
+
+enum FieldReportStatus {
+  QUEUED
+  SUBMITTED
+  REJECTED
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  OPEN
+  ACKNOWLEDGED
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+model Observer {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  organization       String?
+  accreditationNumber String?
+  phone              String?
+  createdAt          DateTime @default(now())
+
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments ObserverAssignment[]
+
+  @@map("observers")
+}
+
+model ObserverAssignment {
+  id               String                @id @default(cuid())
+  observerId       String
+  pollingStationId String
+  status           FieldAssignmentStatus @default(ASSIGNED)
+  assignedAt       DateTime              @default(now())
+  acceptedAt       DateTime?
+  checkedInAt      DateTime?
+  checkInLatitude  Float?
+  checkInLongitude Float?
+
+  observer       Observer       @relation(fields: [observerId], references: [id], onDelete: Cascade)
+  pollingStation PollingStation @relation(fields: [pollingStationId], references: [id])
+  reports        FieldReport[]
+
+  @@unique([observerId, pollingStationId])
+  @@map("observer_assignments")
+}
+
+// Section 21's "Capture locally → queue → connectivity restored →
+// synchronize → server validates → acknowledge" is implemented client-side
+// in src/lib/field/offline-queue.ts (localStorage-backed) — `status` here
+// tracks the server-side lifecycle once a report actually reaches this
+// table; a report queued locally on a disconnected device doesn't exist
+// here yet, by definition.
+model FieldReport {
+  id           String            @id @default(cuid())
+  assignmentId String
+  electionId   String
+  type         FieldReportType
+  status       FieldReportStatus @default(SUBMITTED)
+  content      Json
+  gpsLatitude  Float?
+  gpsLongitude Float?
+  clientReportId String?         // idempotency key from the submitting device, so a retried sync never double-inserts
+  submittedAt  DateTime          @default(now())
+
+  assignment ObserverAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  election   Election           @relation(fields: [electionId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, clientReportId])
+  @@map("field_reports")
+}
+
+model TurnoutSnapshot {
+  id               String   @id @default(cuid())
+  electionId       String
+  pollingStationId String
+  observedAt       DateTime @default(now())
+  votersProcessed  Int
+  registeredVoters Int
+  source           String   @default("FIELD")
+  notes            String?
+
+  election       Election       @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  pollingStation PollingStation @relation(fields: [pollingStationId], references: [id], onDelete: Cascade)
+
+  @@index([electionId, observedAt])
+  @@map("turnout_snapshots")
+}
+
+model Incident {
+  id               String           @id @default(cuid())
+  electionId       String
+  pollingStationId String?
+  reportedById     String?
+  title            String
+  description      String
+  severity         IncidentSeverity
+  status           IncidentStatus   @default(OPEN)
+  gpsLatitude      Float?
+  gpsLongitude     Float?
+  reviewNotes      String?
+  createdAt        DateTime         @default(now())
+  resolvedAt       DateTime?
+
+  election       Election        @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  pollingStation PollingStation? @relation(fields: [pollingStationId], references: [id])
+  reportedBy     User?           @relation("IncidentReporter", fields: [reportedById], references: [id])
+  evidence       IncidentEvidence[]
+
+  @@index([status, severity])
+  @@map("incidents")
+}
+
+model IncidentEvidence {
+  id           String   @id @default(cuid())
+  incidentId   String
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
+  sha256       String
+  content      Bytes
+  uploadedById String?
+  uploadedAt   DateTime @default(now())
+
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  uploadedBy User?    @relation("IncidentEvidenceUploader", fields: [uploadedById], references: [id])
+
+  @@index([incidentId])
+  @@map("incident_evidence")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // AUDIT FOUNDATION
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -577,6 +751,16 @@ enum AuditAction {
   INTEGRITY_ALERT_ASSIGNED
   INTEGRITY_ALERT_RESOLVED
   INTEGRITY_ALERT_DISMISSED
+  OBSERVER_ASSIGNED
+  FIELD_ASSIGNMENT_ACCEPTED
+  FIELD_CHECK_IN
+  FIELD_REPORT_SUBMITTED
+  TURNOUT_SNAPSHOT_CREATED
+  INCIDENT_CREATED
+  INCIDENT_EVIDENCE_UPLOADED
+  INCIDENT_ACKNOWLEDGED
+  INCIDENT_RESOLVED
+  INCIDENT_DISMISSED
 }
 
 model AuditLog {
