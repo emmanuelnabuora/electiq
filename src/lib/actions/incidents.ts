@@ -8,7 +8,7 @@ import { recordAudit } from "@/lib/audit";
 import { requireSession } from "@/lib/session";
 import { ActionError } from "@/lib/actions/errors";
 import { getWardUnitIdForIncident } from "@/lib/field/scope";
-import { createHash } from "crypto";
+import { sha256HexBuffer, encryptBuffer } from "@/lib/security/crypto";
 
 function str(formData: FormData, key: string): string {
   const v = formData.get(key);
@@ -66,7 +66,8 @@ export async function uploadIncidentEvidence(formData: FormData) {
   await requirePermission(session.user.id, "incidents", "create");
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const sha256 = sha256HexBuffer(bytes);
+  const encrypted = encryptBuffer(bytes);
 
   const doc = await db.incidentEvidence.create({
     data: {
@@ -75,7 +76,7 @@ export async function uploadIncidentEvidence(formData: FormData) {
       mimeType: file.type || "application/octet-stream",
       sizeBytes: bytes.byteLength,
       sha256,
-      content: new Uint8Array(bytes),
+      content: new Uint8Array(encrypted),
       uploadedById: session.user.id,
     },
   });

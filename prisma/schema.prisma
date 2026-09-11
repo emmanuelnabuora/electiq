@@ -47,6 +47,15 @@ model User {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  // MFA (Sprint 11). The TOTP secret is encrypted at rest with AES-256-GCM
+  // (src/lib/security/crypto.ts) — even a database dump doesn't expose a
+  // usable secret without EVIDENCE_ENCRYPTION_KEY. Backup codes are
+  // one-way hashed with bcrypt, the same as passwords: never stored or
+  // logged in recoverable form.
+  mfaEnabled            Boolean   @default(false)
+  mfaSecretEncrypted    String?
+  mfaBackupCodesHashed  Json?
+
   roles             UserRole[]
   scopes            UserScope[]
   auditLogs         AuditLog[]
@@ -56,6 +65,7 @@ model User {
   uploadedDocuments ResultDocument[]       @relation("ResultDocumentUploader")
   assignedAlerts    IntegrityAlert[]       @relation("IntegrityAlertAssignee")
   observerProfile   Observer?
+  sessions          UserSession[]
   reportedIncidents Incident[]             @relation("IncidentReporter")
   uploadedIncidentEvidence IncidentEvidence[] @relation("IncidentEvidenceUploader")
   aiConversations   AIConversation[]
@@ -816,6 +826,10 @@ enum AuditAction {
   INCIDENT_DISMISSED
   COPILOT_QUERY
   SCENARIO_RUN_CREATED
+  MFA_ENABLED
+  MFA_DISABLED
+  MFA_CHALLENGE_SUCCEEDED
+  MFA_CHALLENGE_FAILED
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -857,6 +871,31 @@ model ScenarioRun {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// ENTERPRISE SECURITY (Sprint 11)
+//
+// Section 11's "Session/device monitoring." Populated on every successful
+// login (src/lib/auth.ts) with the IP and user agent captured from the
+// request — never used to auto-block, only to let a user (or an admin
+// looking at their own account) see "is this actually me." A genuinely
+// different device/IP appearing here is a signal for the person to check,
+// not evidence of compromise by itself.
+// ─────────────────────────────────────────────────────────────────────────
+
+model UserSession {
+  id         String   @id @default(cuid())
+  userId     String
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("user_sessions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // AUDIT FOUNDATION
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -871,6 +910,17 @@ model AuditLog {
   newState      Json?
   reason        String?
   createdAt     DateTime    @default(now())
+
+  // Tamper-evident hash chain (Sprint 11 — "Immutable audit storage").
+  // Each row's contentHash covers its own fields plus the previous row's
+  // hash, so altering or deleting a historical row breaks every hash
+  // after it — detectable, not physically prevented (this is still an
+  // application-level table, not WORM storage). Nullable because rows
+  // written before this migration have no hash and the chain starts
+  // fresh from here — see SPRINT_11.md for why that's a stated limitation,
+  // not a retroactive guarantee.
+  contentHash   String?
+  previousHash  String?
 
   actor User? @relation(fields: [actorId], references: [id])
 

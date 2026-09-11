@@ -85,6 +85,16 @@ available (the `postgis` Docker image variant, or `postgresql-*-postgis-3`
 if managing your own instance) — the migration runs `CREATE EXTENSION IF
 NOT EXISTS postgis`, but the extension's files must exist on the server.
 
+Generate an `EVIDENCE_ENCRYPTION_KEY` before first run (required — see
+Environment variables below):
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+`npm run sbom` regenerates `sbom.json` (a real CycloneDX Software Bill of
+Materials); `npm run audit` runs `npm audit` for a real dependency
+vulnerability scan. See `SPRINT_11.md` for the current disclosed findings.
+
 ## Environment variables
 
 Copy `.env.example` to `.env` and fill in:
@@ -357,6 +367,23 @@ single-instance, not Redis-backed). Never exposed here: submitter/
 verifier/approver identities, audit logs, integrity alerts, incidents, or
 evidence documents.
 
+## Enterprise Security (Sprint 11)
+
+`/command-center/security` — MFA setup (RFC 6238 TOTP via `otplib`, with
+backup codes), recent-session monitoring, and (for `audit.read` roles) a
+live audit-chain integrity check and secret-configuration warnings.
+Result documents, incident evidence, and MFA secrets are encrypted at
+rest with AES-256-GCM (`src/lib/security/crypto.ts` — Node's standard
+`crypto` module, never a custom scheme). Every audit log row is now part
+of a SHA-256 hash chain that detects tampering after the fact
+(tamper-*evidence*, not tamper-*prevention* — see `SPRINT_11.md`). The
+login endpoint has its own IP-based rate limiter, separate from
+per-account lockout and from the public API's limiter.
+
+**Read `SPRINT_11.md` before deploying this anywhere real** — it
+discloses 2 critical and 6 high-severity `npm audit` findings in
+Next.js 14 that require a major-version migration not yet performed.
+
 ## Testing
 
 ```bash
@@ -368,17 +395,19 @@ npm test
 `tests/results-validation.test.ts`, `tests/results-aggregation.test.ts`,
 `tests/command-center.test.ts`, `tests/integrity.test.ts`,
 `tests/field.test.ts`, `tests/copilot-tools.test.ts`,
-`tests/analytics.test.ts`, `tests/scenarios.test.ts`, and
-`tests/public-portal.test.ts` are integration tests against a real
-seeded Postgres database (not mocks), because the thing worth testing
-here is whether the actual Prisma queries, validation logic, and rule
-evaluations behave correctly against real data — a mock would not have
-caught a mistake in any of them, and in fact multiple real bugs (a stale
-"current election" query pattern, a histogram off-by-one, a vote-share
-denominator error repeated across two scenario modules, and public pages
-being statically prerendered instead of reflecting live data) were only
-found because these tests and this build's own output were checked
-against real data. All 77 pass against a live database as of Sprint 10.
+`tests/analytics.test.ts`, `tests/scenarios.test.ts`,
+`tests/public-portal.test.ts`, and `tests/security.test.ts` are
+integration tests against a real seeded Postgres database (not mocks),
+because the thing worth testing here is whether the actual Prisma
+queries, validation logic, and rule evaluations behave correctly against
+real data — a mock would not have caught a mistake in any of them, and
+in fact multiple real bugs (a stale "current election" query pattern, a
+histogram off-by-one, a vote-share denominator error repeated across two
+scenario modules, public pages being statically prerendered instead of
+reflecting live data, and a tamper-detection test that left the real
+audit chain broken via its own untidied side effect) were only found
+because these tests and this build's own output were checked against
+real data. All 92 pass against a live database as of Sprint 11.
 
 ## Docker
 
@@ -447,13 +476,18 @@ Sprint 2 items:
 
 ## Current sprint
 
-Sprint 10 — Public Election Portal. See `SPRINT_10.md` for the detailed
-objective, scope, and verification record (Sprints 1–9's records are in
-`SPRINT_01.md` through `SPRINT_09.md`).
+Sprint 11 — Enterprise Security. See `SPRINT_11.md` for the detailed
+objective, scope, and verification record (Sprints 1–10's records are in
+`SPRINT_01.md` through `SPRINT_10.md`). **This sprint's most important
+entry is a disclosed, unresolved risk: `npm audit` found 2 critical and
+6 high-severity vulnerabilities in Next.js 14, whose fix requires a
+major-version migration not yet performed — see `SPRINT_11.md`'s "A
+real, disclosed vulnerability finding" section before deploying this
+anywhere real.**
 
 ## Next sprint
 
-Sprint 11 — Enterprise Security: MFA, SSO/OIDC, Zero Trust hardening,
-encryption at rest/in transit, WAF and DDoS architecture, and security
-scanning across both the authenticated Command Center and the new public
-surface area.
+Sprint 12 — Enterprise Deployment: CI/CD pipeline, containerization,
+infrastructure-as-code, blue-green/canary deployment strategy, and
+production readiness review — including finally addressing the Next.js
+upgrade this sprint left open.

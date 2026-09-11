@@ -1,14 +1,20 @@
-import { createHash } from "crypto";
 import { db } from "@/lib/db";
+import { sha256HexBuffer, encryptBuffer, decryptBuffer } from "@/lib/security/crypto";
 
 /**
- * Evidence Vault storage, scoped to result documents for Sprint 3. File
- * bytes live in Postgres (`ResultDocument.content`) behind this narrow
- * interface rather than scattered `db.resultDocument.create()` calls, so
- * swapping to an S3-compatible backend later (Section 4) only means
- * changing this file, not every call site. Section 13 is explicit that
- * evidence identity must never rely on filename — every document gets a
- * computed SHA-256 here, not one supplied by the client.
+ * Evidence Vault storage, scoped to result documents. File bytes live in
+ * Postgres (`ResultDocument.content`) behind this narrow interface rather
+ * than scattered `db.resultDocument.create()` calls, so swapping to an
+ * S3-compatible backend later (Section 4) only means changing this file,
+ * not every call site. Section 13 is explicit that evidence identity
+ * must never rely on filename — every document gets a computed SHA-256
+ * here, not one supplied by the client.
+ *
+ * Sprint 11 adds encryption at rest (Section 11): the SHA-256 is computed
+ * over the original plaintext (so it verifies against the actual file
+ * content, independent of how it's stored), and only the encrypted bytes
+ * (AES-256-GCM, src/lib/security/crypto.ts) are written to the database.
+ * getResultDocument() transparently decrypts before returning.
  */
 export async function storeResultDocument(params: {
   submissionId: string;
@@ -17,7 +23,8 @@ export async function storeResultDocument(params: {
   bytes: Buffer;
   uploadedById?: string;
 }) {
-  const sha256 = createHash("sha256").update(params.bytes).digest("hex");
+  const sha256 = sha256HexBuffer(params.bytes);
+  const encrypted = encryptBuffer(params.bytes);
 
   return db.resultDocument.create({
     data: {
@@ -26,12 +33,15 @@ export async function storeResultDocument(params: {
       mimeType: params.mimeType,
       sizeBytes: params.bytes.byteLength,
       sha256,
-      content: new Uint8Array(params.bytes),
+      content: new Uint8Array(encrypted),
       uploadedById: params.uploadedById,
     },
   });
 }
 
 export async function getResultDocument(id: string) {
-  return db.resultDocument.findUnique({ where: { id } });
+  const doc = await db.resultDocument.findUnique({ where: { id } });
+  if (!doc) return null;
+  const decrypted = decryptBuffer(Buffer.from(doc.content));
+  return { ...doc, content: new Uint8Array(decrypted) };
 }

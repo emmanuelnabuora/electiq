@@ -78,7 +78,9 @@ export default async function IncidentDetailPage({ params }: { params: { id: str
         <CardContent className="flex flex-col gap-3 py-4">
           {incident.evidence.map((e) => (
             <div key={e.id} className="flex items-center justify-between text-sm">
-              <span className="text-light">{e.fileName}</span>
+              <a href={`/api/incidents/evidence/${e.id}`} className="text-accent hover:underline">
+                {e.fileName}
+              </a>
               <span className="text-xs text-neutral">{(e.sizeBytes / 1024).toFixed(0)} KB · sha256:{e.sha256.slice(0, 12)}…</span>
             </div>
           ))}
