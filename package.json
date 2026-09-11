@@ -13,7 +13,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "sbom": "npx --yes @cyclonedx/cyclonedx-npm --output-file sbom.json",
-    "audit": "npm audit"
+    "audit": "npm audit",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
