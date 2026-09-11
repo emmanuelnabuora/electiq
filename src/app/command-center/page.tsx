@@ -2,6 +2,7 @@ import { requireSession } from "@/lib/session";
 import { authorize } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { getResultsAggregate } from "@/lib/results/aggregation";
+import { LiveResultsPanel } from "@/components/command-center/live-results-panel";
 import { KpiCard } from "@/components/command-center/kpi-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -189,6 +190,8 @@ export default async function CommandCenterPage({
               </CardContent>
             </Card>
           )}
+
+          {election && <LiveResultsPanel electionId={election.id} />}
         </>
       )}
 

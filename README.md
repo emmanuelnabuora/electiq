@@ -247,6 +247,31 @@ units from a spreadsheet.
 - `.env` is git-ignored; `.env.example` documents required variables with no
   real secrets
 
+## Results Engine (Sprint 3)
+
+`/command-center/results` is the workspace: filterable by status, scoped
+by the signed-in user's geography, with reporting/verified/published KPIs
+computed live. Submitting a result (`/command-center/results/submit`)
+validates against 5 deterministic rules and creates an immutable version —
+corrections never edit a row in place, they create a new one and mark the
+prior version `CORRECTED`. Every transition (submit → verify/flag/dispute
+→ approve → publish) is permission- and geography-checked and audited.
+Evidence documents get a computed SHA-256 and are stored in Postgres
+behind `src/lib/evidence.ts`, a narrow interface a real S3-compatible swap
+would use.
+
+## Live Command Center (Sprint 4)
+
+`GET /api/command-center` is a dedicated, permission-gated snapshot
+endpoint returning candidate standings, regional/constituency breakdowns,
+and a reporting trend — all computed fresh from the database on every
+request, nothing cached or simulated. The Command Center page polls it
+every 20 seconds via `src/components/command-center/live-results-panel.tsx`
+and renders it with Recharts. These figures are explicitly labeled
+provisional/unverified in the UI, since they include everything reported
+so far, not only published results — see `SPRINT_04.md` for why that's a
+deliberate reading of the neutrality requirement, not an oversight.
+
 ## Testing
 
 ```bash
@@ -254,12 +279,14 @@ npm run seed   # tests run against the seeded database
 npm test
 ```
 
-`tests/rbac.test.ts`, `tests/import.test.ts`, and `tests/audit.test.ts` are
-integration tests against a real seeded Postgres database (not mocks),
-because the thing worth testing here is whether the actual Prisma queries
-and CSV validation logic behave correctly against real data — a mock would
-not have caught a mistake in either. All 17 were run and passed against a
-live database as part of building Sprint 2.
+`tests/rbac.test.ts`, `tests/import.test.ts`, `tests/audit.test.ts`,
+`tests/results-validation.test.ts`, `tests/results-aggregation.test.ts`,
+and `tests/command-center.test.ts` are integration tests against a real
+seeded Postgres database (not mocks), because the thing worth testing
+here is whether the actual Prisma queries, validation logic, and
+aggregation math behave correctly against real data — a mock would not
+have caught a mistake in any of them. All 31 pass against a live
+database as of Sprint 4.
 
 ## Docker
 
@@ -328,12 +355,12 @@ Sprint 2 items:
 
 ## Current sprint
 
-Sprint 3 — Results Engine. See `SPRINT_03.md` for the detailed objective,
-scope, and verification record (Sprints 1–2's records are in
-`SPRINT_01.md` and `SPRINT_02.md`).
+Sprint 4 — Live Command Center. See `SPRINT_04.md` for the detailed
+objective, scope, and verification record (Sprints 1–3's records are in
+`SPRINT_01.md`, `SPRINT_02.md`, `SPRINT_03.md`).
 
 ## Next sprint
 
-Sprint 4 — Live Command Center: candidate standings, regional reporting
-breakdowns, and turnout trend built against the Results Engine's real
-data, plus auto-refresh.
+Sprint 5 — Election Integrity: rule-based integrity monitoring
+(TURNOUT_GT_REGISTERED, HIGH_REJECTED_BALLOT_RATE, DUPLICATE_RESULT, etc.),
+integrity alerts with human review workflow, and the integrity dashboard.
