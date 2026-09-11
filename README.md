@@ -342,6 +342,21 @@ scenario also reports which constituencies would change which party
 leads them, standing in for "seat scenarios" since this schema's only
 fully-populated race (President) isn't literally seat-based.
 
+## Public Election Portal (Sprint 10)
+
+`/public` (no login required) shows only officially PUBLISHED results —
+Results, Candidates, Regions, Turnout, Map, Updates, and Election Data,
+matching Section 10's nav exactly. Every read goes through
+`src/lib/public/queries.ts`, a deliberately separate and narrower query
+layer from the internal `src/lib/results/*` functions — none of its
+functions accept a status filter parameter, because `PUBLISHED` is
+hard-coded into every query rather than passed in. `/api/public/*`
+exposes the same data as rate-limited JSON (30 requests/minute per
+client; see `SPRINT_10.md` for why this is in-memory and
+single-instance, not Redis-backed). Never exposed here: submitter/
+verifier/approver identities, audit logs, integrity alerts, incidents, or
+evidence documents.
+
 ## Testing
 
 ```bash
@@ -353,15 +368,17 @@ npm test
 `tests/results-validation.test.ts`, `tests/results-aggregation.test.ts`,
 `tests/command-center.test.ts`, `tests/integrity.test.ts`,
 `tests/field.test.ts`, `tests/copilot-tools.test.ts`,
-`tests/analytics.test.ts`, and `tests/scenarios.test.ts` are integration
-tests against a real seeded Postgres database (not mocks), because the
-thing worth testing here is whether the actual Prisma queries,
-validation logic, and rule evaluations behave correctly against real
-data — a mock would not have caught a mistake in any of them, and in
-fact multiple real bugs (a stale "current election" query pattern, a
-histogram off-by-one, and a vote-share denominator error repeated across
-two scenario modules) were only found because these tests run against
-real data. All 70 pass against a live database as of Sprint 9.
+`tests/analytics.test.ts`, `tests/scenarios.test.ts`, and
+`tests/public-portal.test.ts` are integration tests against a real
+seeded Postgres database (not mocks), because the thing worth testing
+here is whether the actual Prisma queries, validation logic, and rule
+evaluations behave correctly against real data — a mock would not have
+caught a mistake in any of them, and in fact multiple real bugs (a stale
+"current election" query pattern, a histogram off-by-one, a vote-share
+denominator error repeated across two scenario modules, and public pages
+being statically prerendered instead of reflecting live data) were only
+found because these tests and this build's own output were checked
+against real data. All 77 pass against a live database as of Sprint 10.
 
 ## Docker
 
@@ -430,12 +447,13 @@ Sprint 2 items:
 
 ## Current sprint
 
-Sprint 9 — Scenario Intelligence. See `SPRINT_09.md` for the detailed
-objective, scope, and verification record (Sprints 1–8's records are in
-`SPRINT_01.md` through `SPRINT_08.md`).
+Sprint 10 — Public Election Portal. See `SPRINT_10.md` for the detailed
+objective, scope, and verification record (Sprints 1–9's records are in
+`SPRINT_01.md` through `SPRINT_09.md`).
 
 ## Next sprint
 
-Sprint 10 — Public Election Portal: a separate public-facing experience
-showing only PUBLISHED results, with rate-limited public APIs and no
-exposure of unverified results, internal alerts, or private incidents.
+Sprint 11 — Enterprise Security: MFA, SSO/OIDC, Zero Trust hardening,
+encryption at rest/in transit, WAF and DDoS architecture, and security
+scanning across both the authenticated Command Center and the new public
+surface area.

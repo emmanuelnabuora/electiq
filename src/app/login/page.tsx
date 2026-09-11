@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -94,6 +95,11 @@ export default function LoginPage() {
 
         <p className="mt-6 text-center text-xs text-neutral">
           Every sign-in attempt is recorded to the audit log.
+        </p>
+        <p className="mt-2 text-center text-xs">
+          <Link href="/public" className="text-accent hover:underline">
+            View public election results →
+          </Link>
         </p>
       </div>
     </main>
