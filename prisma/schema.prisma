@@ -815,6 +815,10 @@ enum AuditAction {
   COPILOT_QUERY
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// AUDIT FOUNDATION
+// ─────────────────────────────────────────────────────────────────────────
+
 model AuditLog {
   id            String      @id @default(cuid())
   actorId       String?

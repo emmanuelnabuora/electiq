@@ -337,6 +337,204 @@ async function seedElection(countryId: string) {
   return election;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// SPRINT 8 — synthetic result generation for analytics
+//
+// Advanced Analytics (comparison, swing, competitiveness, distributions)
+// is only meaningfully testable against real data spanning more than a
+// handful of hand-entered submissions. This section seeds a full,
+// deterministic (not random-every-run) set of PUBLISHED results: a
+// completed historical election for comparison, and enough of the
+// current election's remaining stations to make its own distributions
+// non-trivial — while deliberately leaving some current-election
+// stations unreported, so Sprint 4's live "reporting in progress"
+// narrative and Sprint 8's analytics narrative both stay true at once.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Deterministic PRNG (mulberry32) seeded from a string, so re-running the seed produces identical synthetic results rather than different ones each time. */
+function seededRandom(seed: string): () => number {
+  let h = 1779033703 ^ seed.length;
+  for (let i = 0; i < seed.length; i++) {
+    h = Math.imul(h ^ seed.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return function () {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  };
+}
+
+type StationResultInput = {
+  registeredVoters: number;
+  ballotsIssued: number;
+  votesCast: number;
+  validVotes: number;
+  rejectedBallots: number;
+  candidateVotes: Array<{ candidateId: string; votes: number }>;
+};
+
+/**
+ * Generates one polling station's result, biased by a per-region "lean"
+ * vector (base vote share per candidate index) plus per-station jitter —
+ * real enough to produce genuine regional swing and competitiveness
+ * patterns, clearly synthetic in its numbers.
+ */
+function generateStationResult(
+  stationCode: string,
+  registeredVoters: number,
+  candidateIds: string[],
+  regionLean: number[]
+): StationResultInput {
+  const rng = seededRandom(stationCode);
+  const turnoutFraction = 0.55 + rng() * 0.35; // 55%-90% turnout
+  const ballotsIssued = Math.round(registeredVoters * turnoutFraction);
+  const rejectedRate = 0.01 + rng() * 0.05; // 1%-6% rejected
+  const votesCast = ballotsIssued;
+  const rejectedBallots = Math.round(votesCast * rejectedRate);
+  const validVotes = votesCast - rejectedBallots;
+
+  const jittered = regionLean.map((w) => Math.max(0.02, w + (rng() - 0.5) * 0.15));
+  const total = jittered.reduce((a, b) => a + b, 0);
+  const shares = jittered.map((w) => w / total);
+
+  const candidateVotes = candidateIds.map((candidateId, i) => ({
+    candidateId,
+    votes: Math.round(validVotes * shares[i]),
+  }));
+  // Rounding can drift the sum by a vote or two — true it up on the largest share so validVotes stays exact.
+  const drift = validVotes - candidateVotes.reduce((sum, cv) => sum + cv.votes, 0);
+  candidateVotes[shares.indexOf(Math.max(...shares))].votes += drift;
+
+  return { registeredVoters, ballotsIssued, votesCast, validVotes, rejectedBallots, candidateVotes };
+}
+
+/** Region-level vote-share leanings per candidate index, distinct per region so swing/competitiveness analysis has real patterns to find. */
+const REGION_LEANS: Record<string, number[]> = {
+  "Northern Region": [0.5, 0.25, 0.15, 0.1],
+  "Central Region": [0.3, 0.4, 0.2, 0.1],
+  "Coastal Region": [0.2, 0.15, 0.2, 0.45],
+};
+
+async function publishResultsForElection(
+  electionId: string,
+  positionId: string,
+  candidateIds: string[],
+  options: { skipExisting: boolean; inclusionRate: number }
+) {
+  const stations = await db.pollingStation.findMany({
+    include: { pollingCenter: { include: { unit: { include: { parent: { include: { parent: true } } } } } } },
+  });
+
+  let published = 0;
+  for (const station of stations) {
+    if (options.skipExisting) {
+      const existing = await db.resultSubmission.findFirst({
+        where: { electionId, positionId, pollingStationId: station.id },
+      });
+      if (existing) continue;
+    }
+
+    const rng = seededRandom(`${electionId}-${station.code}-include`);
+    if (rng() > options.inclusionRate) continue;
+
+    const regionName = station.pollingCenter.unit.parent?.parent?.name ?? "Northern Region";
+    const lean = REGION_LEANS[regionName] ?? [0.25, 0.25, 0.25, 0.25];
+    const result = generateStationResult(station.code, station.registeredVoters, candidateIds, lean);
+
+    await db.resultSubmission.create({
+      data: {
+        electionId,
+        positionId,
+        pollingStationId: station.id,
+        version: 1,
+        status: "PUBLISHED",
+        registeredVoters: result.registeredVoters,
+        ballotsIssued: result.ballotsIssued,
+        votesCast: result.votesCast,
+        validVotes: result.validVotes,
+        rejectedBallots: result.rejectedBallots,
+        submittedAt: new Date(),
+        verifiedAt: new Date(),
+        approvedAt: new Date(),
+        publishedAt: new Date(),
+        candidateResults: { create: result.candidateVotes },
+      },
+    });
+    published++;
+  }
+  return published;
+}
+
+async function seedHistoricalElection(countryId: string) {
+  const election = await db.election.upsert({
+    where: { id: "seed-karibu-general-2021" },
+    update: {},
+    create: {
+      id: "seed-karibu-general-2021",
+      countryId,
+      name: "Karibu General Election 2021",
+      electionDate: new Date("2021-08-09"),
+      status: "ARCHIVED",
+    },
+  });
+
+  const position = await db.electionPosition.upsert({
+    where: { electionId_name: { electionId: election.id, name: "President" } },
+    update: {},
+    create: { electionId: election.id, name: "President" },
+  });
+
+  // Same party lineup as 2026 (the natural case in most real democracies —
+  // parties persist across elections even as candidates change), with a
+  // 2021 candidate slate distinct from the 2026 one so comparisons reflect
+  // genuine electoral change rather than the same names re-winning by
+  // construction.
+  const parties = [
+    { name: "Unity Forward Party", abbreviation: "UFP", colorHex: "#2F80ED" },
+    { name: "National Progress Alliance", abbreviation: "NPA", colorHex: "#22C55E" },
+    { name: "Karibu Reform Movement", abbreviation: "KRM", colorHex: "#F59E0B" },
+    { name: "Coastal Peoples Congress", abbreviation: "CPC", colorHex: "#EF4444" },
+  ];
+  const partyRecords = await Promise.all(
+    parties.map((p) =>
+      db.party.upsert({
+        where: { electionId_abbreviation: { electionId: election.id, abbreviation: p.abbreviation } },
+        update: {},
+        create: { electionId: election.id, ...p },
+      })
+    )
+  );
+
+  const candidates = [
+    { fullName: "Josephine Waweru", partyAbbr: "UFP" },
+    { fullName: "Peter Njau", partyAbbr: "NPA" },
+    { fullName: "Grace Otieno", partyAbbr: "KRM" },
+    { fullName: "Samuel Mwangi", partyAbbr: "CPC" },
+  ];
+  const candidateIds: string[] = [];
+  for (const c of candidates) {
+    const party = partyRecords.find((p) => p.abbreviation === c.partyAbbr)!;
+    const existing = await db.candidate.findFirst({
+      where: { electionId: election.id, positionId: position.id, fullName: c.fullName },
+    });
+    const candidate =
+      existing ??
+      (await db.candidate.create({
+        data: { electionId: election.id, positionId: position.id, partyId: party.id, fullName: c.fullName },
+      }));
+    candidateIds.push(candidate.id);
+  }
+
+  const published = await publishResultsForElection(election.id, position.id, candidateIds, {
+    skipExisting: true,
+    inclusionRate: 1, // historical election: fully reported and certified
+  });
+
+  return { election, position, candidateIds, published };
+}
+
 async function seedUsers(roles: Record<string, { id: string }>, regionUnitId: string, constituencyUnitId: string) {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
 
@@ -432,6 +630,23 @@ async function main() {
     create: { observerId: observer.id, pollingStationId: firstStation.id },
   });
 
+  // Sprint 8 — a completed historical election (fully published) so
+  // comparison/swing analytics have real data to compare against, plus
+  // filling in most (not all — Sprint 4's live "reporting in progress"
+  // narrative stays true) of the current election's remaining stations.
+  const historical = await seedHistoricalElection(country.id);
+
+  const presidency2026 = await db.electionPosition.findFirstOrThrow({
+    where: { electionId: election.id, name: "President" },
+  });
+  const candidates2026 = await db.candidate.findMany({ where: { positionId: presidency2026.id } });
+  const backfilled = await publishResultsForElection(
+    election.id,
+    presidency2026.id,
+    candidates2026.map((c) => c.id),
+    { skipExisting: true, inclusionRate: 0.85 }
+  );
+
   console.log("Seed complete.");
   console.log(`  Country: ${country.name}`);
   console.log(`  Election: ${election.name} (${election.status})`);
@@ -439,6 +654,8 @@ async function main() {
   console.log(`  Roles seeded: ${Object.keys(roles).length}`);
   console.log(`  Demo users: ${demoUsers.length} (password for all: ${DEMO_PASSWORD})`);
   console.log(`  Observer assignment: ${observerUser.email} -> ${firstStation.code}`);
+  console.log(`  Historical election: ${historical.election.name} (${historical.published} stations published)`);
+  console.log(`  Current election backfill: ${backfilled} additional stations published for analytics`);
 }
 
 main()

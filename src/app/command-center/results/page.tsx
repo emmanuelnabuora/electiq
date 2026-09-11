@@ -45,7 +45,7 @@ export default async function ResultsPage({
 
   const election = await (searchParams.electionId
     ? db.election.findUnique({ where: { id: searchParams.electionId } })
-    : db.election.findFirst({ orderBy: { createdAt: "desc" } }));
+    : db.election.findFirst({ where: { status: { not: "ARCHIVED" } }, orderBy: { electionDate: "desc" } }));
 
   if (!election) {
     return (

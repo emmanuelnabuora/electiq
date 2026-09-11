@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getCurrentElectionId } from "@/lib/elections/current";
 import { authorize } from "@/lib/rbac";
 import { getResultsAggregate } from "@/lib/results/aggregation";
 import { getCandidateStandings } from "@/lib/results/candidate-standings";
@@ -11,7 +12,8 @@ async function execute(userId: string): Promise<ToolResult> {
     return { data: null, sources: [], deniedReason: "This role does not have elections.read permission." };
   }
 
-  const election = await db.election.findFirst({ orderBy: { createdAt: "desc" } });
+  const currentElectionId = await getCurrentElectionId();
+  const election = currentElectionId ? await db.election.findUnique({ where: { id: currentElectionId } }) : null;
   if (!election) return { data: { message: "No election configured." }, sources: [] };
 
   const position = await db.electionPosition.findFirst({

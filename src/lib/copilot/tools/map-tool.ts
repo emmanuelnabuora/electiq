@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getCurrentElectionId } from "@/lib/elections/current";
 import { authorize, resolveUserScope } from "@/lib/rbac";
 import { getGeographicBreakdown } from "@/lib/results/geographic-breakdown";
 import type { ToolDefinition, ToolResult } from "@/lib/copilot/types";
@@ -9,7 +10,8 @@ async function execute(userId: string, input: Record<string, unknown>): Promise<
     return { data: null, sources: [], deniedReason: "This role does not have elections.read permission." };
   }
 
-  const election = await db.election.findFirst({ orderBy: { createdAt: "desc" } });
+  const currentElectionId = await getCurrentElectionId();
+  const election = currentElectionId ? await db.election.findUnique({ where: { id: currentElectionId } }) : null;
   if (!election) return { data: { message: "No election configured." }, sources: [] };
 
   const positionName = input.positionName ? String(input.positionName) : "President";

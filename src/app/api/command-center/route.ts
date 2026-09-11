@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   const electionId = req.nextUrl.searchParams.get("electionId");
   const election = await (electionId
     ? db.election.findUnique({ where: { id: electionId } })
-    : db.election.findFirst({ orderBy: { createdAt: "desc" } }));
+    : db.election.findFirst({ where: { status: { not: "ARCHIVED" } }, orderBy: { electionDate: "desc" } }));
 
   if (!election) {
     return NextResponse.json({ error: "No election configured" }, { status: 404 });

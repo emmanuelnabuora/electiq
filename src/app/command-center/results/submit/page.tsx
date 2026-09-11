@@ -25,7 +25,8 @@ export default async function SubmitResultPage({
   const election = await (searchParams.electionId
     ? db.election.findUnique({ where: { id: searchParams.electionId }, include: { positions: { include: { candidates: { include: { party: true } } } } } })
     : db.election.findFirst({
-        orderBy: { createdAt: "desc" },
+        where: { status: { not: "ARCHIVED" } },
+        orderBy: { electionDate: "desc" },
         include: { positions: { include: { candidates: { include: { party: true } } } } },
       }));
 

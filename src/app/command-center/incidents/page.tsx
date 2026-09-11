@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireSession } from "@/lib/session";
 import { authorize } from "@/lib/rbac";
 import { db } from "@/lib/db";
+import { getCurrentElectionId } from "@/lib/elections/current";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,7 +32,8 @@ export default async function IncidentsPage({
     );
   }
 
-  const election = await db.election.findFirst({ orderBy: { createdAt: "desc" } });
+  const currentElectionId = await getCurrentElectionId();
+  const election = currentElectionId ? await db.election.findUnique({ where: { id: currentElectionId } }) : null;
 
   const incidents = canRead
     ? await db.incident.findMany({

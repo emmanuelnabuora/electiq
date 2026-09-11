@@ -40,7 +40,8 @@ export default async function CommandCenterPage({
             include: { country: true, positions: true, parties: true, candidates: true },
           })
         : db.election.findFirst({
-            orderBy: { createdAt: "desc" },
+            where: { status: { not: "ARCHIVED" } },
+            orderBy: { electionDate: "desc" },
             include: { country: true, positions: true, parties: true, candidates: true },
           }))
     : null;

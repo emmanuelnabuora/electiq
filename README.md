@@ -317,6 +317,18 @@ verified.
 |---|---|
 | `ANTHROPIC_API_KEY` | Enables the Copilot. Without it, the Copilot honestly reports it isn't configured rather than fabricating a response. |
 
+## Advanced Analytics (Sprint 8)
+
+`/command-center/analytics` compares two elections — turnout, party vote
+share, regional swing, and race-competitiveness margins — plus turnout
+and rejected-ballot statistical distributions for the current election.
+A historical election is modeled as an ordinary `Election` row with
+`status: ARCHIVED` and fully published results, not a separate schema,
+so it reuses every existing results/analytics query for free. Every
+comparative view is explicitly framed as descriptive, never causal (see
+`SPRINT_08.md`) — a swing or a close margin describes what happened, not
+why.
+
 ## Testing
 
 ```bash
@@ -327,12 +339,15 @@ npm test
 `tests/rbac.test.ts`, `tests/import.test.ts`, `tests/audit.test.ts`,
 `tests/results-validation.test.ts`, `tests/results-aggregation.test.ts`,
 `tests/command-center.test.ts`, `tests/integrity.test.ts`,
-`tests/field.test.ts`, and `tests/copilot-tools.test.ts` are integration
-tests against a real seeded Postgres database (not mocks), because the
-thing worth testing here is whether the actual Prisma queries,
-validation logic, and rule evaluations behave correctly against real
-data — a mock would not have caught a mistake in any of them. All 52
-pass against a live database as of Sprint 7.
+`tests/field.test.ts`, `tests/copilot-tools.test.ts`, and
+`tests/analytics.test.ts` are integration tests against a real seeded
+Postgres database (not mocks), because the thing worth testing here is
+whether the actual Prisma queries, validation logic, and rule
+evaluations behave correctly against real data — a mock would not have
+caught a mistake in any of them, and in fact two real bugs (a stale
+"current election" query pattern and a histogram off-by-one) were only
+found because these tests run against real data. All 59 pass against a
+live database as of Sprint 8.
 
 ## Docker
 
@@ -401,12 +416,12 @@ Sprint 2 items:
 
 ## Current sprint
 
-Sprint 7 — ElectIQ Copilot. See `SPRINT_07.md` for the detailed
-objective, scope, and verification record (Sprints 1–6's records are in
-`SPRINT_01.md` through `SPRINT_06.md`).
+Sprint 8 — Advanced Analytics. See `SPRINT_08.md` for the detailed
+objective, scope, and verification record (Sprints 1–7's records are in
+`SPRINT_01.md` through `SPRINT_07.md`).
 
 ## Next sprint
 
-Sprint 8 — Advanced Analytics: historical election comparison, turnout
-and candidate-performance trends, regional swing analysis, and
-competitiveness analysis.
+Sprint 9 — Scenario Intelligence: turnout/swing scenario modeling,
+remaining-report simulations, and seat/runoff scenarios — every output
+visually and textually marked "MODEL ESTIMATE — NOT OFFICIAL RESULT."

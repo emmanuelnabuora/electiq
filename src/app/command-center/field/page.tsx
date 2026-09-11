@@ -1,6 +1,7 @@
 import { requireSession } from "@/lib/session";
 import { authorize } from "@/lib/rbac";
 import { db } from "@/lib/db";
+import { getCurrentElectionId } from "@/lib/elections/current";
 import { getObserverProfile } from "@/lib/field/scope";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +24,8 @@ export default async function FieldOperationsPage() {
   const canManage = await authorize(userId, "field", "manage");
   const observer = await getObserverProfile(userId);
 
-  const election = await db.election.findFirst({ orderBy: { createdAt: "desc" } });
+  const currentElectionId = await getCurrentElectionId();
+  const election = currentElectionId ? await db.election.findUnique({ where: { id: currentElectionId } }) : null;
 
   const myAssignments = observer
     ? await db.observerAssignment.findMany({

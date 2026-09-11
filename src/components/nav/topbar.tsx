@@ -20,8 +20,13 @@ export async function Topbar({
   userName: string;
   userRoles: string[];
 }) {
+  // Ordered by electionDate, not createdAt — insertion order isn't
+  // chronological order once a historical election exists (see
+  // src/lib/elections/current.ts), and the selector's default (the first
+  // item when no ?electionId= is set) must be the actual current
+  // election, not whichever one happened to be seeded last.
   const elections = await db.election.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: { electionDate: "desc" },
     select: { id: true, name: true, status: true },
   });
 

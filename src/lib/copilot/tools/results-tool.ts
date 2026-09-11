@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getCurrentElectionId } from "@/lib/elections/current";
 import { authorize, resolveUserScope } from "@/lib/rbac";
 import { getCandidateStandings } from "@/lib/results/candidate-standings";
 import type { ToolDefinition, ToolResult } from "@/lib/copilot/types";
@@ -10,7 +11,8 @@ async function execute(userId: string, input: Record<string, unknown>): Promise<
   }
 
   const action = String(input.action ?? "status_summary");
-  const election = await db.election.findFirst({ orderBy: { createdAt: "desc" } });
+  const currentElectionId = await getCurrentElectionId();
+  const election = currentElectionId ? await db.election.findUnique({ where: { id: currentElectionId } }) : null;
   if (!election) return { data: { message: "No election configured." }, sources: [] };
 
   if (action === "standings") {
