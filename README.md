@@ -329,6 +329,19 @@ comparative view is explicitly framed as descriptive, never causal (see
 `SPRINT_08.md`) — a swing or a close margin describes what happened, not
 why.
 
+## Scenario Intelligence (Sprint 9)
+
+`/command-center/scenarios` — the Scenario Lab — models 4 scenario
+types (Remaining Report, Turnout Adjustment, Regional Swing, Runoff)
+against the current election's real data. Every output is labeled
+"MODEL ESTIMATE — NOT OFFICIAL RESULT" and persisted as a `ScenarioRun`
+row with its model version, input assumptions, execution time, and a
+plain-language confidence/uncertainty note — see `SPRINT_09.md` for the
+exact wording each scenario type uses and why. The Swing Adjustment
+scenario also reports which constituencies would change which party
+leads them, standing in for "seat scenarios" since this schema's only
+fully-populated race (President) isn't literally seat-based.
+
 ## Testing
 
 ```bash
@@ -339,15 +352,16 @@ npm test
 `tests/rbac.test.ts`, `tests/import.test.ts`, `tests/audit.test.ts`,
 `tests/results-validation.test.ts`, `tests/results-aggregation.test.ts`,
 `tests/command-center.test.ts`, `tests/integrity.test.ts`,
-`tests/field.test.ts`, `tests/copilot-tools.test.ts`, and
-`tests/analytics.test.ts` are integration tests against a real seeded
-Postgres database (not mocks), because the thing worth testing here is
-whether the actual Prisma queries, validation logic, and rule
-evaluations behave correctly against real data — a mock would not have
-caught a mistake in any of them, and in fact two real bugs (a stale
-"current election" query pattern and a histogram off-by-one) were only
-found because these tests run against real data. All 59 pass against a
-live database as of Sprint 8.
+`tests/field.test.ts`, `tests/copilot-tools.test.ts`,
+`tests/analytics.test.ts`, and `tests/scenarios.test.ts` are integration
+tests against a real seeded Postgres database (not mocks), because the
+thing worth testing here is whether the actual Prisma queries,
+validation logic, and rule evaluations behave correctly against real
+data — a mock would not have caught a mistake in any of them, and in
+fact multiple real bugs (a stale "current election" query pattern, a
+histogram off-by-one, and a vote-share denominator error repeated across
+two scenario modules) were only found because these tests run against
+real data. All 70 pass against a live database as of Sprint 9.
 
 ## Docker
 
@@ -416,12 +430,12 @@ Sprint 2 items:
 
 ## Current sprint
 
-Sprint 8 — Advanced Analytics. See `SPRINT_08.md` for the detailed
-objective, scope, and verification record (Sprints 1–7's records are in
-`SPRINT_01.md` through `SPRINT_07.md`).
+Sprint 9 — Scenario Intelligence. See `SPRINT_09.md` for the detailed
+objective, scope, and verification record (Sprints 1–8's records are in
+`SPRINT_01.md` through `SPRINT_08.md`).
 
 ## Next sprint
 
-Sprint 9 — Scenario Intelligence: turnout/swing scenario modeling,
-remaining-report simulations, and seat/runoff scenarios — every output
-visually and textually marked "MODEL ESTIMATE — NOT OFFICIAL RESULT."
+Sprint 10 — Public Election Portal: a separate public-facing experience
+showing only PUBLISHED results, with rate-limited public APIs and no
+exposure of unverified results, internal alerts, or private incidents.

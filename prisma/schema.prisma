@@ -59,6 +59,7 @@ model User {
   reportedIncidents Incident[]             @relation("IncidentReporter")
   uploadedIncidentEvidence IncidentEvidence[] @relation("IncidentEvidenceUploader")
   aiConversations   AIConversation[]
+  scenarioRuns      ScenarioRun[]
 
   @@map("users")
 }
@@ -308,6 +309,7 @@ model Election {
   fieldReports FieldReport[]
   turnoutSnapshots TurnoutSnapshot[]
   incidents Incident[]
+  scenarioRuns ScenarioRun[]
 
   @@map("elections")
 }
@@ -813,6 +815,45 @@ enum AuditAction {
   INCIDENT_RESOLVED
   INCIDENT_DISMISSED
   COPILOT_QUERY
+  SCENARIO_RUN_CREATED
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// SCENARIO INTELLIGENCE (Sprint 9)
+//
+// Section 9 is explicit: every model output must display "MODEL ESTIMATE
+// — NOT OFFICIAL RESULT" and the system must store model version, input
+// assumptions, execution time, and a confidence/uncertainty note. A
+// ScenarioRun row is exactly that record — every scenario computed in
+// src/lib/scenarios/ gets persisted here before being shown, so "what did
+// we model and when" is always answerable later, the same audit posture
+// as everything else in this app.
+// ─────────────────────────────────────────────────────────────────────────
+
+enum ScenarioType {
+  REMAINING_REPORT
+  TURNOUT_ADJUSTMENT
+  SWING_ADJUSTMENT
+  RUNOFF
+}
+
+model ScenarioRun {
+  id                String       @id @default(cuid())
+  electionId        String
+  positionName      String
+  scenarioType      ScenarioType
+  modelVersion      String
+  assumptions       Json
+  result            Json
+  confidenceNote    String
+  executedById      String?
+  executedAt        DateTime     @default(now())
+
+  election   Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  executedBy User?    @relation(fields: [executedById], references: [id])
+
+  @@index([electionId, scenarioType, executedAt])
+  @@map("scenario_runs")
 }
 
 // ─────────────────────────────────────────────────────────────────────────
