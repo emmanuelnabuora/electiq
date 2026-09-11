@@ -58,6 +58,7 @@ model User {
   observerProfile   Observer?
   reportedIncidents Incident[]             @relation("IncidentReporter")
   uploadedIncidentEvidence IncidentEvidence[] @relation("IncidentEvidenceUploader")
+  aiConversations   AIConversation[]
 
   @@map("users")
 }
@@ -717,6 +718,56 @@ model IncidentEvidence {
 // AUDIT FOUNDATION
 // ─────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────
+// ELECTIQ COPILOT (Sprint 7)
+//
+// Section 30: use authorized data only, cite records, distinguish facts
+// from inference and published from unverified, never invent missing
+// values, never bypass RBAC. Every tool the Copilot can call
+// (src/lib/copilot/tools/) re-checks permissions itself — the model never
+// gets raw database access, only these permission-checked functions.
+// ─────────────────────────────────────────────────────────────────────────
+
+model AIConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  electionId String?
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AIMessage[]
+
+  @@map("ai_conversations")
+}
+
+enum AIMessageRole {
+  USER
+  ASSISTANT
+}
+
+model AIMessage {
+  id             String        @id @default(cuid())
+  conversationId String
+  role           AIMessageRole
+  content        String
+  // Records which tools were invoked for this message and with what
+  // arguments/results — the AI audit log Section 30 calls for, kept with
+  // the message rather than only in AuditLog so a conversation's full
+  // grounding is visible in one place.
+  toolCalls      Json?
+  createdAt      DateTime      @default(now())
+
+  conversation AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("ai_messages")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// AUDIT FOUNDATION
+// ─────────────────────────────────────────────────────────────────────────
+
 enum AuditAction {
   LOGIN
   LOGOUT
@@ -761,6 +812,7 @@ enum AuditAction {
   INCIDENT_ACKNOWLEDGED
   INCIDENT_RESOLVED
   INCIDENT_DISMISSED
+  COPILOT_QUERY
 }
 
 model AuditLog {

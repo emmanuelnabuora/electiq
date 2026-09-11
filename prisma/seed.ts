@@ -42,6 +42,7 @@ const PERMISSIONS: Array<{ resource: string; action: string; description: string
   { resource: "field", action: "checkin", description: "Accept an assignment and check in at a polling station" },
   { resource: "field", action: "report", description: "Submit field reports and turnout snapshots" },
   { resource: "incidents", action: "review", description: "Acknowledge, resolve, or dismiss reported incidents" },
+  { resource: "copilot", action: "use", description: "Query the ElectIQ Copilot" },
 ];
 
 const ROLE_DEFINITIONS: Record<RoleName, { description: string; permissions: Array<[string, string]> }> = {
@@ -55,7 +56,7 @@ const ROLE_DEFINITIONS: Record<RoleName, { description: string; permissions: Arr
       ["elections", "read"], ["elections", "create"], ["elections", "update"],
       ["results", "read"], ["results", "approve"], ["results", "publish"],
       ["audit", "read"], ["geography", "manage"], ["integrity", "read"], ["integrity", "review"],
-      ["field", "manage"], ["incidents", "read"], ["incidents", "review"],
+      ["field", "manage"], ["incidents", "read"], ["incidents", "review"], ["copilot", "use"],
     ],
   },
   NATIONAL_RETURNING_OFFICER: {
@@ -63,7 +64,7 @@ const ROLE_DEFINITIONS: Record<RoleName, { description: string; permissions: Arr
     permissions: [
       ["elections", "read"], ["results", "read"], ["results", "verify"], ["results", "approve"],
       ["audit", "read"], ["integrity", "read"], ["integrity", "review"],
-      ["incidents", "read"], ["incidents", "review"],
+      ["incidents", "read"], ["incidents", "review"], ["copilot", "use"],
     ],
   },
   REGIONAL_OFFICER: {
@@ -71,6 +72,7 @@ const ROLE_DEFINITIONS: Record<RoleName, { description: string; permissions: Arr
     permissions: [
       ["elections", "read"], ["results", "read"], ["results", "verify"],
       ["integrity", "read"], ["integrity", "review"], ["incidents", "read"], ["incidents", "review"],
+      ["copilot", "use"],
     ],
   },
   CONSTITUENCY_OFFICER: {
@@ -78,6 +80,7 @@ const ROLE_DEFINITIONS: Record<RoleName, { description: string; permissions: Arr
     permissions: [
       ["elections", "read"], ["results", "read"], ["results", "verify"],
       ["integrity", "read"], ["integrity", "review"], ["incidents", "read"], ["incidents", "review"],
+      ["copilot", "use"],
     ],
   },
   POLLING_OFFICER: {
@@ -93,7 +96,7 @@ const ROLE_DEFINITIONS: Record<RoleName, { description: string; permissions: Arr
   },
   ANALYST: {
     description: "Read-only access to analytics and results data.",
-    permissions: [["elections", "read"], ["results", "read"], ["integrity", "read"]],
+    permissions: [["elections", "read"], ["results", "read"], ["integrity", "read"], ["copilot", "use"]],
   },
   MEDIA_USER: {
     description: "Read-only access to published election information.",
@@ -101,7 +104,7 @@ const ROLE_DEFINITIONS: Record<RoleName, { description: string; permissions: Arr
   },
   AUDITOR: {
     description: "Traces system actions across the platform.",
-    permissions: [["elections", "read"], ["audit", "read"], ["integrity", "read"]],
+    permissions: [["elections", "read"], ["audit", "read"], ["integrity", "read"], ["copilot", "use"]],
   },
   PARTY_AGENT: {
     description: "Authorized party representative observing results in their race.",

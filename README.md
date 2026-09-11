@@ -297,6 +297,26 @@ integrity alerts. Field reports use a real (if scope-limited — see
 unsent reports in localStorage with an idempotency key, auto-syncing
 when connectivity returns.
 
+## ElectIQ Copilot (Sprint 7)
+
+`/command-center/copilot` is a permission-aware chat interface backed by
+8 structured tools (`src/lib/copilot/tools/`) — the model never gets raw
+database access, every tool re-checks RBAC and geographic scope itself.
+Responses always follow ANSWER / KEY FINDINGS / DATA SOURCES /
+LIMITATIONS / RECOMMENDED REVIEW, and live result figures are explicitly
+marked provisional, never presented as certified. The LLM integration
+(`src/lib/copilot/gateway.ts` + `providers/anthropic.ts`) is
+provider-independent by design, but hasn't made a real call to
+`api.anthropic.com` in this build environment — set `ANTHROPIC_API_KEY`
+to enable it; see `SPRINT_07.md` for exactly what was and wasn't
+verified.
+
+## Environment variables (Copilot)
+
+| Variable | Purpose |
+|---|---|
+| `ANTHROPIC_API_KEY` | Enables the Copilot. Without it, the Copilot honestly reports it isn't configured rather than fabricating a response. |
+
 ## Testing
 
 ```bash
@@ -306,13 +326,13 @@ npm test
 
 `tests/rbac.test.ts`, `tests/import.test.ts`, `tests/audit.test.ts`,
 `tests/results-validation.test.ts`, `tests/results-aggregation.test.ts`,
-`tests/command-center.test.ts`, `tests/integrity.test.ts`, and
-`tests/field.test.ts` are integration tests against a real seeded
-Postgres database (not mocks), because the thing worth testing here is
-whether the actual Prisma queries, validation logic, and rule
-evaluations behave correctly against real data — a mock would not have
-caught a mistake in any of them. All 42 pass against a live database as
-of Sprint 6.
+`tests/command-center.test.ts`, `tests/integrity.test.ts`,
+`tests/field.test.ts`, and `tests/copilot-tools.test.ts` are integration
+tests against a real seeded Postgres database (not mocks), because the
+thing worth testing here is whether the actual Prisma queries,
+validation logic, and rule evaluations behave correctly against real
+data — a mock would not have caught a mistake in any of them. All 52
+pass against a live database as of Sprint 7.
 
 ## Docker
 
@@ -381,12 +401,12 @@ Sprint 2 items:
 
 ## Current sprint
 
-Sprint 6 — Field Operations. See `SPRINT_06.md` for the detailed
-objective, scope, and verification record (Sprints 1–5's records are in
-`SPRINT_01.md` through `SPRINT_05.md`).
+Sprint 7 — ElectIQ Copilot. See `SPRINT_07.md` for the detailed
+objective, scope, and verification record (Sprints 1–6's records are in
+`SPRINT_01.md` through `SPRINT_06.md`).
 
 ## Next sprint
 
-Sprint 7 — ElectIQ Copilot: permission-aware AI election intelligence
-with structured tools (ResultsTool, TurnoutTool, IncidentTool,
-IntegrityTool, and more), grounded in the real data this app now holds.
+Sprint 8 — Advanced Analytics: historical election comparison, turnout
+and candidate-performance trends, regional swing analysis, and
+competitiveness analysis.
