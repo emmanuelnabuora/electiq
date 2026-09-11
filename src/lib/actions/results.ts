@@ -10,6 +10,7 @@ import { ActionError } from "@/lib/actions/errors";
 import { getWardUnitIdForPollingStation } from "@/lib/results/scope";
 import { validateResultSubmission } from "@/lib/results/validation";
 import { storeResultDocument } from "@/lib/evidence";
+import { scanSubmission } from "@/lib/integrity/scan";
 
 function str(formData: FormData, key: string): string {
   const v = formData.get(key);
@@ -119,6 +120,13 @@ export async function submitResult(formData: FormData) {
     entityId: submission.id,
     newState: { version: submission.version, status: submission.status, errors: validation.errors },
   });
+
+  // Integrity monitoring is a second, independent layer on top of
+  // deterministic validation (Section 5) — only runs once a submission has
+  // already passed the rules in src/lib/results/validation.ts.
+  if (validation.valid) {
+    await scanSubmission(submission.id);
+  }
 
   revalidatePath("/command-center/results");
   redirect(`/command-center/results/${submission.id}`);

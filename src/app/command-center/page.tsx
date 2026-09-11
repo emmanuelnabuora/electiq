@@ -31,6 +31,7 @@ export default async function CommandCenterPage({
   // Server-side authorization — never inferred from what the sidebar shows.
   const canReadElections = await authorize(userId, "elections", "read");
   const canReadAudit = await authorize(userId, "audit", "read");
+  const canReadIntegrity = await authorize(userId, "integrity", "read");
 
   const election = canReadElections
     ? await (searchParams.electionId
@@ -78,6 +79,19 @@ export default async function CommandCenterPage({
     resultsAggregate && resultsAggregate.reportingStations > 0 && pollingStationAgg?._sum.registeredVoters
       ? (resultsAggregate.votesCast / pollingStationAgg._sum.registeredVoters) * 100
       : null;
+
+  const integrityCounts = canReadIntegrity
+    ? await db.integrityAlert.groupBy({
+        by: ["status", "severity"],
+        _count: { _all: true },
+      })
+    : [];
+  const openAlerts = integrityCounts
+    .filter((c) => c.status === "OPEN" || c.status === "UNDER_REVIEW")
+    .reduce((sum, c) => sum + c._count._all, 0);
+  const criticalOpenAlerts = integrityCounts
+    .filter((c) => (c.status === "OPEN" || c.status === "UNDER_REVIEW") && c.severity === "CRITICAL")
+    .reduce((sum, c) => sum + c._count._all, 0);
 
   const now = new Date().toLocaleString("en-US", {
     weekday: "short",
@@ -157,11 +171,12 @@ export default async function CommandCenterPage({
             />
             <KpiCard
               label="Integrity Alerts"
-              value="—"
+              value={canReadIntegrity ? formatNumber(openAlerts) : "—"}
+              hint={canReadIntegrity ? `${criticalOpenAlerts} unresolved critical` : undefined}
               icon={ShieldAlert}
               tone="red"
-              locked
-              lockedHint="Arrives with Election Integrity (Sprint 5)"
+              locked={!canReadIntegrity}
+              lockedHint="Requires integrity.read permission"
             />
           </div>
 

@@ -36,6 +36,8 @@ const PERMISSIONS: Array<{ resource: string; action: string; description: string
   { resource: "audit", action: "read", description: "View audit logs" },
   { resource: "users", action: "manage", description: "Manage user accounts and role assignments" },
   { resource: "geography", action: "manage", description: "Manage administrative units, polling centers/stations, and bulk import" },
+  { resource: "integrity", action: "read", description: "View integrity alerts" },
+  { resource: "integrity", action: "review", description: "Assign, resolve, or dismiss integrity alerts" },
 ];
 
 const ROLE_DEFINITIONS: Record<RoleName, { description: string; permissions: Array<[string, string]> }> = {
@@ -48,23 +50,23 @@ const ROLE_DEFINITIONS: Record<RoleName, { description: string; permissions: Arr
     permissions: [
       ["elections", "read"], ["elections", "create"], ["elections", "update"],
       ["results", "read"], ["results", "approve"], ["results", "publish"],
-      ["audit", "read"], ["geography", "manage"],
+      ["audit", "read"], ["geography", "manage"], ["integrity", "read"], ["integrity", "review"],
     ],
   },
   NATIONAL_RETURNING_OFFICER: {
     description: "National-level verification and approval of results.",
     permissions: [
       ["elections", "read"], ["results", "read"], ["results", "verify"], ["results", "approve"],
-      ["audit", "read"],
+      ["audit", "read"], ["integrity", "read"], ["integrity", "review"],
     ],
   },
   REGIONAL_OFFICER: {
     description: "Regional oversight of results and reporting progress.",
-    permissions: [["elections", "read"], ["results", "read"], ["results", "verify"]],
+    permissions: [["elections", "read"], ["results", "read"], ["results", "verify"], ["integrity", "read"], ["integrity", "review"]],
   },
   CONSTITUENCY_OFFICER: {
     description: "Constituency-level verification of polling-station results.",
-    permissions: [["elections", "read"], ["results", "read"], ["results", "verify"]],
+    permissions: [["elections", "read"], ["results", "read"], ["results", "verify"], ["integrity", "read"], ["integrity", "review"]],
   },
   POLLING_OFFICER: {
     description: "Submits results for an assigned polling station.",
@@ -76,7 +78,7 @@ const ROLE_DEFINITIONS: Record<RoleName, { description: string; permissions: Arr
   },
   ANALYST: {
     description: "Read-only access to analytics and results data.",
-    permissions: [["elections", "read"], ["results", "read"]],
+    permissions: [["elections", "read"], ["results", "read"], ["integrity", "read"]],
   },
   MEDIA_USER: {
     description: "Read-only access to published election information.",
@@ -84,7 +86,7 @@ const ROLE_DEFINITIONS: Record<RoleName, { description: string; permissions: Arr
   },
   AUDITOR: {
     description: "Traces system actions across the platform.",
-    permissions: [["elections", "read"], ["audit", "read"]],
+    permissions: [["elections", "read"], ["audit", "read"], ["integrity", "read"]],
   },
   PARTY_AGENT: {
     description: "Authorized party representative observing results in their race.",

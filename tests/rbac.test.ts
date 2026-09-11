@@ -42,6 +42,13 @@ describe("RBAC permission resolution", () => {
     expect(await hasPermission(commissionerId, "geography", "manage")).toBe(true);
     expect(await hasPermission(pollingOfficerId, "geography", "manage")).toBe(false);
   });
+
+  it("CONSTITUENCY_OFFICER can review integrity alerts (Sprint 5) but POLLING_OFFICER cannot", async () => {
+    const constituencyOfficerId = await userIdByEmail("constituency.officer@electiq.example");
+    const pollingOfficerId = await userIdByEmail("polling.officer@electiq.example");
+    expect(await hasPermission(constituencyOfficerId, "integrity", "review")).toBe(true);
+    expect(await hasPermission(pollingOfficerId, "integrity", "review")).toBe(false);
+  });
 });
 
 describe("Geographic scope resolution", () => {

@@ -54,6 +54,7 @@ model User {
   submittedResults  ResultSubmission[]     @relation("ResultSubmitter")
   verifications     ResultVerification[]   @relation("ResultVerifier")
   uploadedDocuments ResultDocument[]       @relation("ResultDocumentUploader")
+  assignedAlerts    IntegrityAlert[]       @relation("IntegrityAlertAssignee")
 
   @@map("users")
 }
@@ -477,6 +478,68 @@ model ResultDocument {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// ELECTION INTEGRITY (Sprint 5)
+//
+// Section 2 of the master spec is explicit: an alert is "requires
+// verification," never a fraud determination. Every rule here flags a
+// statistical or procedural anomaly for human review — nothing here ever
+// writes a conclusion, only an observation plus the evidence behind it.
+// ─────────────────────────────────────────────────────────────────────────
+
+enum IntegrityRule {
+  TURNOUT_GT_REGISTERED
+  VOTES_GT_VALID
+  CANDIDATE_TOTAL_MISMATCH
+  DUPLICATE_RESULT
+  MISSING_RESULT_DOCUMENT
+  GPS_MISMATCH
+  HIGH_REJECTED_BALLOT_RATE
+  UNUSUAL_TURNOUT_VARIANCE
+  MULTIPLE_SUBMISSIONS
+  LATE_CORRECTION
+}
+
+enum IntegritySeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IntegrityAlertStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+model IntegrityAlert {
+  id               String               @id @default(cuid())
+  rule             IntegrityRule
+  severity         IntegritySeverity
+  entityType       String
+  entityId         String
+  explanation      String
+  evidence         Json
+  status           IntegrityAlertStatus @default(OPEN)
+  assignedToId     String?
+  reviewNotes      String?
+  createdAt        DateTime             @default(now())
+  resolvedAt       DateTime?
+
+  assignedTo User? @relation("IntegrityAlertAssignee", fields: [assignedToId], references: [id])
+
+  // The same underlying condition should not spawn duplicate open alerts —
+  // enforced in application logic (src/lib/integrity/scan.ts) by checking
+  // for an existing OPEN/UNDER_REVIEW alert with the same (rule, entityId)
+  // before creating a new one, rather than a DB constraint, since a
+  // RESOLVED or DISMISSED alert for the same entity is legitimate history.
+  @@index([rule, entityType, entityId, status])
+  @@index([status, severity])
+  @@map("integrity_alerts")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // AUDIT FOUNDATION
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -510,6 +573,10 @@ enum AuditAction {
   RESULT_APPROVED
   RESULT_PUBLISHED
   RESULT_DOCUMENT_UPLOADED
+  INTEGRITY_ALERT_CREATED
+  INTEGRITY_ALERT_ASSIGNED
+  INTEGRITY_ALERT_RESOLVED
+  INTEGRITY_ALERT_DISMISSED
 }
 
 model AuditLog {

@@ -272,6 +272,17 @@ provisional/unverified in the UI, since they include everything reported
 so far, not only published results — see `SPRINT_04.md` for why that's a
 deliberate reading of the neutrality requirement, not an oversight.
 
+## Election Integrity (Sprint 5)
+
+`/command-center/integrity` lists alerts from all 10 rules in the master
+spec, geographically scoped like everything else. Every valid result
+submission is automatically scanned (`src/lib/integrity/scan.ts`) —
+there's no separate "run integrity check" step. An alert is always
+phrased as "requires verification" or "unusual statistical pattern,"
+never a fraud determination, per Section 2. Reviewers with
+`integrity.review` (scoped to their geography) can claim, resolve, or
+dismiss an alert; every transition is audited.
+
 ## Testing
 
 ```bash
@@ -281,12 +292,12 @@ npm test
 
 `tests/rbac.test.ts`, `tests/import.test.ts`, `tests/audit.test.ts`,
 `tests/results-validation.test.ts`, `tests/results-aggregation.test.ts`,
-and `tests/command-center.test.ts` are integration tests against a real
-seeded Postgres database (not mocks), because the thing worth testing
-here is whether the actual Prisma queries, validation logic, and
-aggregation math behave correctly against real data — a mock would not
-have caught a mistake in any of them. All 31 pass against a live
-database as of Sprint 4.
+`tests/command-center.test.ts`, and `tests/integrity.test.ts` are
+integration tests against a real seeded Postgres database (not mocks),
+because the thing worth testing here is whether the actual Prisma
+queries, validation logic, and rule evaluations behave correctly against
+real data — a mock would not have caught a mistake in any of them. All 39
+pass against a live database as of Sprint 5.
 
 ## Docker
 
@@ -355,12 +366,12 @@ Sprint 2 items:
 
 ## Current sprint
 
-Sprint 4 — Live Command Center. See `SPRINT_04.md` for the detailed
-objective, scope, and verification record (Sprints 1–3's records are in
-`SPRINT_01.md`, `SPRINT_02.md`, `SPRINT_03.md`).
+Sprint 5 — Election Integrity. See `SPRINT_05.md` for the detailed
+objective, scope, and verification record (Sprints 1–4's records are in
+`SPRINT_01.md` through `SPRINT_04.md`).
 
 ## Next sprint
 
-Sprint 5 — Election Integrity: rule-based integrity monitoring
-(TURNOUT_GT_REGISTERED, HIGH_REJECTED_BALLOT_RATE, DUPLICATE_RESULT, etc.),
-integrity alerts with human review workflow, and the integrity dashboard.
+Sprint 6 — Field Operations: observer assignments, polling-station
+check-in, opening/turnout/counting/closing reports, incident reporting,
+and offline-first field capture.

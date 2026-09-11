@@ -66,7 +66,7 @@ const sections: NavSection[] = [
     items: [
       { label: "Analytics", icon: BarChart3, sprint: 8 },
       { label: "ElectIQ Copilot", icon: Sparkles, sprint: 7 },
-      { label: "Integrity Alerts", icon: ShieldAlert, sprint: 5 },
+      { label: "Integrity Alerts", href: "/command-center/integrity", icon: ShieldAlert },
       { label: "Historical Analytics", icon: History, sprint: 8 },
       { label: "Scenario Lab", icon: FlaskConical, sprint: 9 },
     ],
