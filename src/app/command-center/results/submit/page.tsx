@@ -5,10 +5,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ResultSubmissionForm } from "@/components/results/result-submission-form";
 
 export default async function SubmitResultPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { electionId?: string };
+  searchParams: Promise<{ electionId?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const session = await requireSession();
   const canSubmit = await authorize(session.user.id, "results", "submit");
 

@@ -3,7 +3,8 @@ import { getCurrentSession } from "@/lib/session";
 import { authorize } from "@/lib/rbac";
 import { getResultDocument } from "@/lib/evidence";
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getCurrentSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -14,7 +15,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const doc = await getResultDocument(params.id);
+  const doc = await getResultDocument(id);
   if (!doc) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

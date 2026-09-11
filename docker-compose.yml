@@ -28,6 +28,13 @@ services:
       DATABASE_URL: "postgresql://postgres:postgres@db:5432/electiq?schema=public"
       NEXTAUTH_URL: "http://localhost:3000"
       NEXTAUTH_SECRET: "replace-with-a-long-random-string"
+      # Required as of Sprint 11 — evidence and MFA secrets cannot be
+      # encrypted at rest without this. Generate with:
+      #   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+      EVIDENCE_ENCRYPTION_KEY: "replace-with-a-real-32-byte-base64-key"
+      # Optional (Sprint 7) — without it, the Copilot reports itself as
+      # unconfigured rather than fabricating a response.
+      ANTHROPIC_API_KEY: ""
       NODE_ENV: "production"
     ports:
       - "3000:3000"

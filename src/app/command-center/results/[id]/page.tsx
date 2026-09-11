@@ -21,7 +21,8 @@ const STATUS_TONE = {
   PUBLISHED: "success",
 } as const;
 
-export default async function ResultDetailPage({ params }: { params: { id: string } }) {
+export default async function ResultDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await requireSession();
   const userId = session.user.id;
 
@@ -37,7 +38,7 @@ export default async function ResultDetailPage({ params }: { params: { id: strin
   }
 
   const submission = await db.resultSubmission.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       election: true,
       position: true,

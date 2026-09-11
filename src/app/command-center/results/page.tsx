@@ -23,10 +23,11 @@ const STATUS_TONE = {
 } as const;
 
 export default async function ResultsPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { electionId?: string; status?: string };
+  searchParams: Promise<{ electionId?: string; status?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const session = await requireSession();
   const userId = session.user.id;
 

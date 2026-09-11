@@ -1,13 +1,7 @@
-import dynamic from "next/dynamic";
 import { requireSession } from "@/lib/session";
 import { authorize } from "@/lib/rbac";
 import { Card, CardContent } from "@/components/ui/card";
-
-// Leaflet touches `window` at import time, so this must never render on the server.
-const ElectionMap = dynamic(
-  () => import("@/components/map/election-map").then((m) => m.ElectionMap),
-  { ssr: false, loading: () => <p className="text-sm text-neutral">Loading map…</p> }
-);
+import { ElectionMap } from "@/components/map/election-map-loader";
 
 export default async function ElectionMapPage() {
   const session = await requireSession();

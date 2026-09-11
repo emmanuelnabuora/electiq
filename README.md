@@ -384,6 +384,21 @@ per-account lockout and from the public API's limiter.
 discloses 2 critical and 6 high-severity `npm audit` findings in
 Next.js 14 that require a major-version migration not yet performed.
 
+## Enterprise Deployment (Sprint 12)
+
+`.github/workflows/ci.yml` runs typecheck, migrate, seed, test, build,
+a dependency audit, and SBOM generation against a real
+`postgis/postgis:16-3.4` service container on every push. `Dockerfile` +
+`docker-entrypoint.sh` build a production image that runs
+`prisma migrate deploy` before starting (safe to re-run, fails closed
+rather than serving traffic against a mismatched schema).
+`docker-compose.yml` runs the full stack locally. `infra/terraform/`
+holds a minimal, syntax-validated AWS skeleton (RDS, ECS Fargate,
+Secrets Manager) — a starting point, never applied against a real
+account. See `SPRINT_12.md` for the deployment strategy recommendation
+(blue-green preferred; avoid canary across schema migrations for this
+app specifically) and the full production readiness review.
+
 ## Testing
 
 ```bash
@@ -474,20 +489,16 @@ Sprint 2 items:
   than dedicated top-level list pages; the sidebar links to both point
   there.
 
-## Current sprint
+## Project status — Sprint 12 of 12 complete
 
-Sprint 11 — Enterprise Security. See `SPRINT_11.md` for the detailed
-objective, scope, and verification record (Sprints 1–10's records are in
-`SPRINT_01.md` through `SPRINT_10.md`). **This sprint's most important
-entry is a disclosed, unresolved risk: `npm audit` found 2 critical and
-6 high-severity vulnerabilities in Next.js 14, whose fix requires a
-major-version migration not yet performed — see `SPRINT_11.md`'s "A
-real, disclosed vulnerability finding" section before deploying this
-anywhere real.**
+The master spec's 12-sprint build is complete. See `SPRINT_01.md`
+through `SPRINT_12.md` for each sprint's detailed objective, scope, and
+verification record. **`SPRINT_12.md`'s "Production readiness review"
+section is the single best entry point** for understanding what's
+genuinely ready to deploy versus what remains — read it before deploying
+this anywhere real.
 
-## Next sprint
-
-Sprint 12 — Enterprise Deployment: CI/CD pipeline, containerization,
-infrastructure-as-code, blue-green/canary deployment strategy, and
-production readiness review — including finally addressing the Next.js
-upgrade this sprint left open.
+The Next.js vulnerability disclosed in Sprint 11 is now resolved: this
+app runs Next.js 15.5.24, the actually-correct patched version (Sprint
+11's original research pointed to 15.5.21, superseded by a second
+security release before this sprint applied it — see `SPRINT_12.md`).

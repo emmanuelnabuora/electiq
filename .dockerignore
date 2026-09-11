@@ -1,0 +1,17 @@
+# Never let a local .env (with real secrets) end up in a build context
+# or image layer — env vars belong in the runtime environment
+# (docker-compose's environment:, a real deployment's secret manager),
+# never baked into the image.
+.env
+.env.*
+!.env.example
+
+node_modules
+.next
+.git
+.github
+
+# Build/test artifacts that don't belong in the image
+sbom.json
+coverage
+*.log

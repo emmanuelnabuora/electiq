@@ -16,7 +16,8 @@ import {
 
 const STATUSES = ["DRAFT", "CONFIGURED", "ACTIVE", "CLOSED", "ARCHIVED"] as const;
 
-export default async function ElectionDetailPage({ params }: { params: { id: string } }) {
+export default async function ElectionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await requireSession();
   const userId = session.user.id;
 
@@ -34,7 +35,7 @@ export default async function ElectionDetailPage({ params }: { params: { id: str
   const canUpdate = await authorize(userId, "elections", "update");
 
   const election = await db.election.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       country: true,
       positions: { include: { candidates: { include: { party: true } } } },

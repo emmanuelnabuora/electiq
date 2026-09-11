@@ -1,17 +1,10 @@
-import nextDynamic from "next/dynamic";
 import { getPublicElection, getPublicRegionsWithBoundaries } from "@/lib/public/queries";
+import { PublicMap } from "@/components/public/public-map-loader";
 
-// Route segment config — must be named exactly "dynamic" per Next.js
-// convention, so the next/dynamic import above is aliased to avoid the
-// collision. This page reads live database state and must never be
-// statically prerendered (see README's Known Limitations for why every
-// public page needs this).
+// Route segment config. This page reads live database state and must
+// never be statically prerendered (see README's Known Limitations for
+// why every public page needs this).
 export const dynamic = "force-dynamic";
-
-const PublicMap = nextDynamic(() => import("@/components/public/public-map").then((m) => m.PublicMap), {
-  ssr: false,
-  loading: () => <p className="text-sm text-neutral">Loading map…</p>,
-});
 
 export default async function PublicMapPage() {
   const election = await getPublicElection();

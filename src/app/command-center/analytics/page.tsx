@@ -17,10 +17,11 @@ const COMPETITIVENESS_TONE = {
 } as const;
 
 export default async function AnalyticsPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { electionAId?: string; electionBId?: string; party?: string; level?: string };
+  searchParams: Promise<{ electionAId?: string; electionBId?: string; party?: string; level?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const session = await requireSession();
   const canRead = await authorize(session.user.id, "results", "read");
 

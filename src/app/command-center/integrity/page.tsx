@@ -21,10 +21,11 @@ const STATUS_TONE = {
 } as const;
 
 export default async function IntegrityAlertsPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { status?: string; severity?: string };
+  searchParams: Promise<{ status?: string; severity?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const session = await requireSession();
   const userId = session.user.id;
 

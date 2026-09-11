@@ -11,10 +11,11 @@ import { createPollingStation } from "@/lib/actions/geography";
 const PAGE_SIZE = 20;
 
 export default async function PollingStationsPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { page?: string; q?: string };
+  searchParams: Promise<{ page?: string; q?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const session = await requireSession();
   const userId = session.user.id;
 

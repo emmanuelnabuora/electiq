@@ -11,7 +11,8 @@ import { claimAlert, resolveAlert, dismissAlert } from "@/lib/actions/integrity"
 const SEVERITY_TONE = { LOW: "neutral", MEDIUM: "warning", HIGH: "warning", CRITICAL: "critical" } as const;
 const STATUS_TONE = { OPEN: "critical", UNDER_REVIEW: "warning", RESOLVED: "success", DISMISSED: "neutral" } as const;
 
-export default async function IntegrityAlertDetailPage({ params }: { params: { id: string } }) {
+export default async function IntegrityAlertDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await requireSession();
   const userId = session.user.id;
 
@@ -27,7 +28,7 @@ export default async function IntegrityAlertDetailPage({ params }: { params: { i
   }
 
   const alert = await db.integrityAlert.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { assignedTo: { select: { name: true } } },
   });
   if (!alert) notFound();

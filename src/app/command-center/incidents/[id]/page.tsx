@@ -12,7 +12,8 @@ import { IncidentEvidenceUpload } from "@/components/field/incident-evidence-upl
 const SEVERITY_TONE = { LOW: "neutral", MEDIUM: "warning", HIGH: "warning", CRITICAL: "critical" } as const;
 const STATUS_TONE = { OPEN: "critical", ACKNOWLEDGED: "warning", UNDER_REVIEW: "warning", RESOLVED: "success", DISMISSED: "neutral" } as const;
 
-export default async function IncidentDetailPage({ params }: { params: { id: string } }) {
+export default async function IncidentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await requireSession();
   const userId = session.user.id;
 
@@ -28,7 +29,7 @@ export default async function IncidentDetailPage({ params }: { params: { id: str
   }
 
   const incident = await db.incident.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       pollingStation: true,
       reportedBy: { select: { name: true } },

@@ -12,10 +12,11 @@ const SEVERITY_TONE = { LOW: "neutral", MEDIUM: "warning", HIGH: "warning", CRIT
 const STATUS_TONE = { OPEN: "critical", ACKNOWLEDGED: "warning", UNDER_REVIEW: "warning", RESOLVED: "success", DISMISSED: "neutral" } as const;
 
 export default async function IncidentsPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { status?: string };
+  searchParams: Promise<{ status?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const session = await requireSession();
   const userId = session.user.id;
 

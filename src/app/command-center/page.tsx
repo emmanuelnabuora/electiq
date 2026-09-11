@@ -21,10 +21,11 @@ function formatNumber(n: number) {
 }
 
 export default async function CommandCenterPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { electionId?: string };
+  searchParams: Promise<{ electionId?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const session = await requireSession();
   const userId = session.user.id;
 
