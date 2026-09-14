@@ -70,6 +70,7 @@ model User {
   uploadedIncidentEvidence IncidentEvidence[] @relation("IncidentEvidenceUploader")
   aiConversations   AIConversation[]
   scenarioRuns      ScenarioRun[]
+  apiKeys           ApiKey[]
 
   @@map("users")
 }
@@ -834,6 +835,8 @@ enum AuditAction {
   USER_DEACTIVATED
   USER_UNLOCKED
   ROLE_PERMISSIONS_UPDATED
+  API_KEY_CREATED
+  API_KEY_REVOKED
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -931,4 +934,28 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+/**
+ * Sprint 13: "API Management." Keys grant elevated, per-key rate limits
+ * on the public API (src/lib/public/rate-limited-response.ts) over the
+ * default anonymous per-IP limit -- they do not currently gate access to
+ * any endpoint that was previously closed (every public API route was
+ * already open, unauthenticated, per Sprint 10's design). Only the
+ * key's hash is ever stored; the raw key is shown once, at creation,
+ * exactly like the MFA backup codes in Sprint 11.
+ */
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  keyHash     String    @unique
+  keyPrefix   String
+  createdById String?
+  createdAt   DateTime  @default(now())
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+
+  createdBy User? @relation(fields: [createdById], references: [id])
+
+  @@map("api_keys")
 }

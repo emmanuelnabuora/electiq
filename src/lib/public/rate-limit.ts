@@ -14,24 +14,30 @@ type Bucket = { count: number; windowStart: number };
 const buckets = new Map<string, Bucket>();
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 30;
+// Sprint 13: a valid API key gets a materially higher ceiling than an
+// anonymous IP -- the whole point of issuing one.
+export const API_KEY_MAX_REQUESTS_PER_WINDOW = 300;
 
-export function checkRateLimit(clientKey: string): { allowed: boolean; remaining: number; resetAt: number } {
+export function checkRateLimit(
+  clientKey: string,
+  maxRequests: number = MAX_REQUESTS_PER_WINDOW
+): { allowed: boolean; remaining: number; resetAt: number } {
   const now = Date.now();
   const existing = buckets.get(clientKey);
 
   if (!existing || now - existing.windowStart >= WINDOW_MS) {
     buckets.set(clientKey, { count: 1, windowStart: now });
-    return { allowed: true, remaining: MAX_REQUESTS_PER_WINDOW - 1, resetAt: now + WINDOW_MS };
+    return { allowed: true, remaining: maxRequests - 1, resetAt: now + WINDOW_MS };
   }
 
-  if (existing.count >= MAX_REQUESTS_PER_WINDOW) {
+  if (existing.count >= maxRequests) {
     return { allowed: false, remaining: 0, resetAt: existing.windowStart + WINDOW_MS };
   }
 
   existing.count++;
   return {
     allowed: true,
-    remaining: MAX_REQUESTS_PER_WINDOW - existing.count,
+    remaining: maxRequests - existing.count,
     resetAt: existing.windowStart + WINDOW_MS,
   };
 }
