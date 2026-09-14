@@ -13,7 +13,7 @@ type Bucket = { count: number; windowStart: number };
 
 const buckets = new Map<string, Bucket>();
 const WINDOW_MS = 60_000;
-const MAX_REQUESTS_PER_WINDOW = 30;
+export const MAX_REQUESTS_PER_WINDOW = 30;
 // Sprint 13: a valid API key gets a materially higher ceiling than an
 // anonymous IP -- the whole point of issuing one.
 export const API_KEY_MAX_REQUESTS_PER_WINDOW = 300;

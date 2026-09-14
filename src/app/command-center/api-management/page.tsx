@@ -3,6 +3,7 @@ import { authorize } from "@/lib/rbac";
 import { listApiKeys } from "@/lib/actions/api-keys";
 import { Card, CardContent } from "@/components/ui/card";
 import { ApiKeyManagement } from "@/components/admin/api-key-management";
+import { MAX_REQUESTS_PER_WINDOW, API_KEY_MAX_REQUESTS_PER_WINDOW } from "@/lib/public/rate-limit";
 
 export default async function ApiManagementPage() {
   const session = await requireSession();
@@ -25,7 +26,8 @@ export default async function ApiManagementPage() {
       <div>
         <h1 className="text-xl font-semibold text-light">API Management</h1>
         <p className="text-sm text-neutral">
-          Keys grant a higher rate limit (300 req/min vs. 30 for anonymous callers) on the public
+          Keys grant a higher rate limit ({API_KEY_MAX_REQUESTS_PER_WINDOW} req/min vs.{" "}
+          {MAX_REQUESTS_PER_WINDOW} for anonymous callers) on the public
           API at <code>/api/public/*</code> — they don't unlock any endpoint that wasn't already
           open, every public API route has been unauthenticated by design since Sprint 10. Present
           a key via the <code>X-API-Key</code> header.

@@ -32,6 +32,17 @@ export default async function ScenariosPage() {
   const election = await db.election.findUniqueOrThrow({ where: { id: electionId } });
   const parties = await db.party.findMany({ where: { electionId }, select: { abbreviation: true, name: true } });
 
+  const positions = await db.electionPosition.findMany({ where: { electionId } });
+  const positionName = positions.find((p) => p.name === "President")?.name ?? positions[0]?.name;
+
+  if (!positionName) {
+    return (
+      <Card>
+        <CardContent className="py-6 text-sm text-neutral">{election.name} has no positions configured.</CardContent>
+      </Card>
+    );
+  }
+
   const history = await db.scenarioRun.findMany({
     where: { electionId },
     orderBy: { executedAt: "desc" },
@@ -44,11 +55,12 @@ export default async function ScenariosPage() {
       <div>
         <h1 className="text-xl font-semibold text-light">Scenario Lab</h1>
         <p className="text-sm text-neutral">
-          {election.name} — President. Every output here is a model estimate, never an official result.
+          {election.name} — {positionName}. Every output here is a model estimate, never an official
+          result.
         </p>
       </div>
 
-      <ScenarioLab electionId={election.id} positionName="President" parties={parties} />
+      <ScenarioLab electionId={election.id} positionName={positionName} parties={parties} />
 
       <Card>
         <CardHeader>

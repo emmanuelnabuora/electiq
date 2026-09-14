@@ -50,12 +50,39 @@ export default async function AnalyticsPage({
     );
   }
 
-  const positionName = "President";
+  const positions = await db.electionPosition.findMany({ where: { electionId: electionB.id } });
+  const positionName =
+    positions.find((p) => p.name === "President")?.name ?? positions[0]?.name;
+
+  if (!positionName) {
+    return (
+      <Card>
+        <CardContent className="py-6 text-sm text-neutral">
+          {electionB.name} has no positions configured.
+        </CardContent>
+      </Card>
+    );
+  }
+
   const level = searchParams.level === "constituency" ? 1 : 0;
 
   const comparison = await compareElections(electionA.id, electionB.id, positionName);
   const leadingParty = comparison.electionB.partyShares[0]?.partyAbbreviation;
-  const party = searchParams.party ?? leadingParty ?? "UFP";
+  const firstRealParty = await db.party.findFirst({
+    where: { electionId: electionB.id },
+    orderBy: { name: "asc" },
+  });
+  const party = searchParams.party ?? leadingParty ?? firstRealParty?.abbreviation;
+
+  if (!party) {
+    return (
+      <Card>
+        <CardContent className="py-6 text-sm text-neutral">
+          {comparison.electionB.electionName} has no parties configured.
+        </CardContent>
+      </Card>
+    );
+  }
 
   const [swing, competitiveness, rejectedDist, turnoutDist] = await Promise.all([
     getRegionalSwing(electionA.id, electionB.id, positionName, party, level as 0 | 1),
