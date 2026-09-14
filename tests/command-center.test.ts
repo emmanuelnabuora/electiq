@@ -73,7 +73,16 @@ describe("Live Command Center — geographic breakdown", () => {
     }
 
     const totalStationsAcrossRegions = regional.reduce((sum, r) => sum + r.totalStations, 0);
-    const actualStationCount = await db.pollingStation.count();
+    // Scoped to the election's own country -- an unscoped count() here
+    // was correct only when a single country's geography ever existed
+    // in the database. Once Kenya's real geography exists alongside the
+    // demo country, an unscoped count would include both, which is
+    // exactly the bug getGeographicBreakdown itself was fixed for
+    // earlier -- this assertion needs the same scoping to still be a
+    // meaningful comparison.
+    const actualStationCount = await db.pollingStation.count({
+      where: { pollingCenter: { unit: { level: { countryId: election.countryId } } } },
+    });
     expect(totalStationsAcrossRegions).toBe(actualStationCount);
   });
 
