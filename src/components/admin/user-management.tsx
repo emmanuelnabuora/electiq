@@ -101,7 +101,7 @@ export function UserManagement({
         <Card>
           <CardContent className="py-4">
             <form action={handleCreate} className="flex flex-col gap-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="name">Name</Label>
                   <Input id="name" name="name" required />
@@ -118,7 +118,7 @@ export function UserManagement({
               </div>
               <div>
                 <Label>Roles</Label>
-                <div className="mt-1 grid grid-cols-2 gap-1.5">
+                <div className="mt-1 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                   {roles.map((role) => (
                     <label key={role.id} className="flex items-center gap-2 text-sm text-light">
                       <input type="checkbox" name="roleIds" value={role.id} />
@@ -145,7 +145,7 @@ export function UserManagement({
       )}
 
       <Card>
-        <CardContent className="py-2">
+        <CardContent className="overflow-x-auto py-2">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="text-xs text-neutral">
@@ -217,7 +217,7 @@ export function UserManagement({
                         <form action={handleUpdateRoles} className="flex flex-col gap-2 px-2">
                           <input type="hidden" name="userId" value={u.id} />
                           <p className="text-xs text-neutral">Editing roles for {u.name}</p>
-                          <div className="grid grid-cols-3 gap-1.5">
+                          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
                             {roles.map((role) => (
                               <label key={role.id} className="flex items-center gap-2 text-sm text-light">
                                 <input

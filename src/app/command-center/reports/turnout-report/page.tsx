@@ -48,7 +48,7 @@ export default async function TurnoutReport() {
           stations only
         </p>
 
-        <div className="mt-6 grid grid-cols-2 gap-4 border-y border-white/10 py-4 print:border-black/20">
+        <div className="mt-6 grid grid-cols-1 gap-4 border-y border-white/10 py-4 sm:grid-cols-2 print:grid-cols-2 print:border-black/20">
           <div>
             <p className="text-xs opacity-60">Overall turnout</p>
             <p className="text-lg font-semibold">{overallTurnout.toFixed(1)}%</p>

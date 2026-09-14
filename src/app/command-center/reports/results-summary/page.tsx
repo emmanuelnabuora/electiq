@@ -42,7 +42,7 @@ export default async function ResultsSummaryReport() {
           Generated {generatedAt.toLocaleString("en-US")} — PROVISIONAL, not an official result
         </p>
 
-        <div className="mt-6 grid grid-cols-3 gap-4 border-y border-white/10 py-4 print:border-black/20">
+        <div className="mt-6 grid grid-cols-1 gap-4 border-y border-white/10 py-4 sm:grid-cols-3 print:grid-cols-3 print:border-black/20">
           <div>
             <p className="text-xs opacity-60">Reporting</p>
             <p className="text-lg font-semibold">

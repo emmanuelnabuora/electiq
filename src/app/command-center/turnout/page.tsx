@@ -121,7 +121,7 @@ export default async function TurnoutPage({
       </Card>
 
       <Card>
-        <CardContent className="py-2">
+        <CardContent className="overflow-x-auto py-2">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="text-xs text-neutral">
