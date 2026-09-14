@@ -34,11 +34,15 @@ export async function getRegionalSwing(
 
   const shareByUnit = async (electionId: string, positionId: string) => {
     const rows = await db.$queryRaw<Array<{ unitId: string; unitName: string; partyVotes: bigint; totalVotes: bigint }>>`
-      WITH unit_at_depth AS (
+      WITH election_country AS (
+        SELECT "countryId" FROM elections WHERE id = ${electionId}
+      ),
+      unit_at_depth AS (
         SELECT au.id, au.name
         FROM administrative_units au
         JOIN administrative_levels al ON al.id = au."levelId"
         WHERE al.depth = ${depth}
+          AND al."countryId" = (SELECT "countryId" FROM election_country)
       ),
       station_unit AS (
         SELECT ps.id AS "stationId", COALESCE(u0.id, u1.id, u2.id) AS "unitId"

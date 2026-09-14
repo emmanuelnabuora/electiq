@@ -118,11 +118,15 @@ export async function getPublicRegionalResults(
       votesCast: bigint | null;
     }>
   >`
-    WITH unit_at_depth AS (
+    WITH election_country AS (
+      SELECT "countryId" FROM elections WHERE id = ${electionId}
+    ),
+    unit_at_depth AS (
       SELECT au.id, au.name
       FROM administrative_units au
       JOIN administrative_levels al ON al.id = au."levelId"
       WHERE al.depth = ${depth}
+        AND al."countryId" = (SELECT "countryId" FROM election_country)
     ),
     station_unit AS (
       SELECT
@@ -232,11 +236,15 @@ export async function getPublicRegionsWithBoundaries(
       votesCast: bigint | null;
     }>
   >`
-    WITH region AS (
+    WITH election_country AS (
+      SELECT "countryId" FROM elections WHERE id = ${electionId}
+    ),
+    region AS (
       SELECT au.id, au.name, au.boundary
       FROM administrative_units au
       JOIN administrative_levels al ON al.id = au."levelId"
       WHERE al.depth = 0
+        AND al."countryId" = (SELECT "countryId" FROM election_country)
     ),
     station_region AS (
       SELECT ps.id AS "stationId", ps."registeredVoters", r.id AS "regionId"

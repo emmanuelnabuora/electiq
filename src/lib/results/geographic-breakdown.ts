@@ -19,6 +19,15 @@ export type GeographicBreakdownRow = {
  * far — dividing by every registered voter in the unit would conflate
  * "turnout is low" with "most stations haven't reported yet," which are
  * different facts.
+ *
+ * Scoped to the election's own country (via election_country CTE) —
+ * without this, once a second country's administrative hierarchy exists
+ * in the same database (e.g. both a demo country and a real one, sharing
+ * the same depth numbering for region/constituency/ward), this query
+ * silently mixed units from every country at that depth into one result
+ * set. That was latent and invisible with only one country in the
+ * database; caught when building the Turnout page against a database
+ * that now has two.
  */
 export async function getGeographicBreakdown(
   electionId: string,
@@ -35,11 +44,15 @@ export async function getGeographicBreakdown(
       votesCast: bigint | null;
     }>
   >`
-    WITH unit_at_depth AS (
+    WITH election_country AS (
+      SELECT "countryId" FROM elections WHERE id = ${electionId}
+    ),
+    unit_at_depth AS (
       SELECT au.id, au.name
       FROM administrative_units au
       JOIN administrative_levels al ON al.id = au."levelId"
       WHERE al.depth = ${depth}
+        AND al."countryId" = (SELECT "countryId" FROM election_country)
     ),
     station_unit AS (
       SELECT

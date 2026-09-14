@@ -1,5 +1,6 @@
 import { db as sharedDb } from "@/lib/db";
 import type { PrismaClient } from "@/generated/prisma/client";
+import { getCurrentElectionId } from "@/lib/elections/current";
 
 /**
  * All PostGIS interaction lives here. `boundary` (AdministrativeUnit) and
@@ -19,6 +20,19 @@ export type LngLat = [number, number];
 
 /** A closed ring: first and last point must be identical. */
 export type Ring = LngLat[];
+
+async function resolveDefaultCountryId(): Promise<string> {
+  const electionId = await getCurrentElectionId();
+  if (electionId) {
+    const election = await sharedDb.election.findUnique({ where: { id: electionId }, select: { countryId: true } });
+    if (election) return election.countryId;
+  }
+  // No current election (e.g. seeding, or a database with no elections
+  // configured yet) -- fall back to whichever country was created first,
+  // rather than throwing, so this remains usable outside a live election.
+  const fallback = await sharedDb.country.findFirstOrThrow({ orderBy: { id: "asc" } });
+  return fallback.id;
+}
 
 /** Sets an administrative unit's boundary from a single polygon (one outer ring, no holes). */
 export async function setUnitBoundary(
@@ -65,11 +79,20 @@ export type UnitGeoFeature = {
  * needs in one query rather than N+1 client-side joins. Pass `parentId` to
  * drill down into one unit's children only (Section 15: "clicking a
  * geographic unit must drill down into its analytical context").
+ *
+ * Scoped to a single country — defaults to the current election's country
+ * when not given explicitly. Without this, once a second country's
+ * administrative hierarchy exists in the same database at the same depth
+ * numbering (region/constituency/ward), this silently mixed units from
+ * every country into one result set; latent with only one country in the
+ * database, caught once a second one existed.
  */
 export async function getUnitsWithBoundaries(
   depth: number,
-  parentId?: string
+  parentId?: string,
+  countryId?: string
 ): Promise<UnitGeoFeature[]> {
+  const resolvedCountryId = countryId ?? (await resolveDefaultCountryId());
   const rows = await sharedDb.$queryRaw<
     Array<{
       id: string;
@@ -96,6 +119,7 @@ export async function getUnitsWithBoundaries(
     LEFT JOIN polling_centers pc ON pc."unitId" = descendant.id
     LEFT JOIN polling_stations ps ON ps."pollingCenterId" = pc.id
     WHERE al.depth = ${depth}
+      AND al."countryId" = ${resolvedCountryId}
       AND (${parentId ?? null}::text IS NULL OR au."parentId" = ${parentId ?? null})
     GROUP BY au.id, au.name, au.code
     ORDER BY au.name
