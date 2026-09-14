@@ -86,7 +86,7 @@ const sections: NavSection[] = [
   {
     title: "Publication",
     items: [
-      { label: "Public Portal", icon: Globe, sprint: 10 },
+      { label: "Public Portal", href: "/public", icon: Globe },
       { label: "API Management", icon: Plug, sprint: 10 },
     ],
   },
