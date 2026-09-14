@@ -277,7 +277,7 @@ async function seedElection(countryId: string) {
     create: {
       id: "seed-karibu-general-2026",
       countryId,
-      name: "Karibu General Election 2026",
+      name: "Election Management System General Election 2026",
       electionDate: new Date("2026-10-12"),
       status: "CONFIGURED",
     },
@@ -474,7 +474,7 @@ async function seedHistoricalElection(countryId: string) {
     create: {
       id: "seed-karibu-general-2021",
       countryId,
-      name: "Karibu General Election 2021",
+      name: "Election Management System General Election 2021",
       electionDate: new Date("2021-08-09"),
       status: "ARCHIVED",
     },
@@ -586,12 +586,12 @@ async function seedUsers(roles: Record<string, { id: string }>, regionUnitId: st
 }
 
 async function main() {
-  console.log("Seeding ElectIQ — Republic of Karibu synthetic environment...");
+  console.log("Seeding ElectIQ — Election Management System synthetic environment...");
 
   const country = await db.country.upsert({
     where: { isoCode: "KRB" },
     update: {},
-    create: { name: "Republic of Karibu", isoCode: "KRB" },
+    create: { name: "Election Management System", isoCode: "KRB" },
   });
 
   const roles = await seedRbac();

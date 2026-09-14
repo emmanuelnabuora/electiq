@@ -83,7 +83,7 @@ export function ElectionWizard({ countries }: { countries: Country[] }) {
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Karibu General Election 2026"
+                  placeholder="e.g. Election Management System General Election 2026"
                 />
               </div>
               <div>

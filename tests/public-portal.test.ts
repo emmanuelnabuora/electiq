@@ -133,7 +133,7 @@ describe("Public Portal — never exposes unpublished data (Section 31)", () => 
   it("getPublicElection exposes only safe configuration fields", async () => {
     const election = await getPublicElection(ELECTION_ID);
     expect(election).not.toBeNull();
-    expect(election!.name).toBe("Karibu General Election 2026");
+    expect(election!.name).toBe("Election Management System General Election 2026");
     expect(Array.isArray(election!.positions)).toBe(true);
     expect(Array.isArray(election!.parties)).toBe(true);
     expect(election).not.toHaveProperty("countryId");

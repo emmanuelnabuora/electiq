@@ -35,7 +35,7 @@ links or fake buttons.
 ```
 prisma/
   schema.prisma          Data model (Sprint 1 + Sprint 2)
-  seed.ts                RBAC catalog + Republic of Karibu synthetic data + GIS boundaries
+  seed.ts                RBAC catalog + Election Management System synthetic data + GIS boundaries
   migrations/             Hand-authored + Prisma-verified SQL migrations
 src/
   app/
@@ -75,7 +75,7 @@ tests/
 npm install
 docker compose up -d db      # or point DATABASE_URL at your own Postgres
 npx prisma migrate dev       # applies prisma/migrations/ (includes PostGIS extension)
-npm run seed                 # RBAC catalog + Republic of Karibu synthetic data + GIS boundaries
+npm run seed                 # RBAC catalog + Election Management System synthetic data + GIS boundaries
 npm run dev
 ```
 
@@ -125,12 +125,12 @@ Once you run `npx prisma migrate dev` in an environment with normal
 internet access, Prisma will read these migrations and treat the database
 as up to date — you do not need to redo anything.
 
-## Seed data — Republic of Karibu
+## Seed data — Election Management System
 
 `npm run seed` creates a fictional synthetic environment:
 
-- **Country**: Republic of Karibu
-- **Election**: Karibu General Election 2026 (Oct 12, 2026), status `CONFIGURED`
+- **Country**: Election Management System
+- **Election**: Election Management System General Election 2026 (Oct 12, 2026), status `CONFIGURED`
 - **Geography**: 3 Regions → 2 Constituencies each → 2 Wards each → 2 Polling
   Centers each → 2 Polling Stations each (48 stations total, ~72,600
   registered voters), laid out on a grid with real PostGIS boundary polygons
@@ -215,7 +215,7 @@ rather than GeoJSON text, so they can be indexed and queried spatially:
 
 Prisma's client can't hydrate these `Unsupported(...)` columns directly —
 all reads and writes go through `src/lib/gis.ts` using `$queryRaw` /
-`$executeRaw`. The seed script lays the Republic of Karibu's regions,
+`$executeRaw`. The seed script lays the Election Management System's regions,
 constituencies, and wards out on a simple non-overlapping grid (real
 PostGIS polygons, synthetic coordinates) since no real survey boundary data
 exists for a fictional country.
@@ -474,7 +474,7 @@ Sprint 2 items:
   only the error presentation needs polish, ideally in Sprint 3 alongside
   the results workflow's own error handling (Section 29).
 - The Election Setup Wizard assumes a single country is the common case
-  (Republic of Karibu) but does support selecting among multiple; there's
+  (Election Management System) but does support selecting among multiple; there's
   no separate country-management screen yet, so seeding remains the way to
   add a country.
 - Geography seed is reduced-scale (48 polling stations, 3 regions) relative

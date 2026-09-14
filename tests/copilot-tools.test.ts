@@ -98,7 +98,7 @@ describe("Copilot tools — data correctness", () => {
       openIntegrityAlerts: number;
       openIncidents: number;
     };
-    expect(data.election).toBe("Karibu General Election 2026");
+    expect(data.election).toBe("Election Management System General Election 2026");
     expect(Array.isArray(data.candidateStandings)).toBe(true);
     expect(typeof data.openIntegrityAlerts).toBe("number");
     expect(typeof data.openIncidents).toBe("number");
