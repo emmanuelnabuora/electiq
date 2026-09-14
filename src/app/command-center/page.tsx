@@ -20,6 +20,19 @@ function formatNumber(n: number) {
   return new Intl.NumberFormat("en-US").format(n);
 }
 
+/**
+ * The depth-0 administrative level's own name (e.g. "County" for Kenya,
+ * "Region" for the demo country) is real, stated data -- unlike the
+ * "Regions" label this replaced, which was hardcoded and would say
+ * "Regions" even for a Kenya-based election that actually has counties.
+ * Simple English pluralization covers both real level names in this
+ * database without needing a full inflection library for two words.
+ */
+function pluralizeLevelName(name: string | null | undefined): string {
+  if (!name) return "Regions";
+  return name.endsWith("y") ? `${name.slice(0, -1)}ies` : `${name}s`;
+}
+
 export default async function CommandCenterPage({
   searchParams: searchParamsPromise,
 }: {
@@ -47,26 +60,28 @@ export default async function CommandCenterPage({
           }))
     : null;
 
-  const [pollingStationAgg, pollingCenterCount, regionCount, constituencyCount] =
-    canReadElections
+  const [pollingStationAgg, pollingCenterCount, regionLevel, regionCount, constituencyCount] =
+    canReadElections && election
       ? await Promise.all([
           db.pollingStation.aggregate({
+            where: { pollingCenter: { unit: { level: { countryId: election.countryId } } } },
             _sum: { registeredVoters: true },
             _count: true,
           }),
-          db.pollingCenter.count(),
+          db.pollingCenter.count({ where: { unit: { level: { countryId: election.countryId } } } }),
+          db.administrativeLevel.findFirst({ where: { depth: 0, countryId: election.countryId } }),
           db.administrativeLevel
-            .findFirst({ where: { depth: 0 } })
+            .findFirst({ where: { depth: 0, countryId: election.countryId } })
             .then((level) =>
               level ? db.administrativeUnit.count({ where: { levelId: level.id } }) : 0
             ),
           db.administrativeLevel
-            .findFirst({ where: { depth: 1 } })
+            .findFirst({ where: { depth: 1, countryId: election.countryId } })
             .then((level) =>
               level ? db.administrativeUnit.count({ where: { levelId: level.id } }) : 0
             ),
         ])
-      : [null, 0, 0, 0];
+      : [null, 0, null, 0, 0];
 
   const recentAudit = canReadAudit
     ? await db.auditLog.findMany({
@@ -143,7 +158,12 @@ export default async function CommandCenterPage({
               icon={Landmark}
               tone="purple"
             />
-            <KpiCard label="Regions" value={formatNumber(regionCount)} icon={Map} tone="teal" />
+            <KpiCard
+              label={pluralizeLevelName(regionLevel?.name)}
+              value={formatNumber(regionCount)}
+              icon={Map}
+              tone="teal"
+            />
             <KpiCard
               label="Constituencies"
               value={formatNumber(constituencyCount)}
