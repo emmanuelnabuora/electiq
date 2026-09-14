@@ -81,7 +81,7 @@ const sections: NavSection[] = [
   },
   {
     title: "Reporting",
-    items: [{ label: "Reports", icon: FileText, sprint: 8 }],
+    items: [{ label: "Reports", href: "/command-center/reports", icon: FileText }],
   },
   {
     title: "Publication",

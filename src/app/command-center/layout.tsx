@@ -11,10 +11,14 @@ export default async function CommandCenterLayout({
 
   return (
     <div className="flex min-h-screen bg-navy-primary">
-      <Sidebar />
+      <div className="print:hidden">
+        <Sidebar />
+      </div>
       <div className="flex flex-1 flex-col">
-        <Topbar userName={session.user.name ?? ""} userRoles={session.user.roles} />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <div className="print:hidden">
+          <Topbar userName={session.user.name ?? ""} userRoles={session.user.roles} />
+        </div>
+        <main className="flex-1 overflow-y-auto p-6 print:overflow-visible print:p-0">{children}</main>
       </div>
     </div>
   );
