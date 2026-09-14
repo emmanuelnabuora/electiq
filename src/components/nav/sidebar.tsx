@@ -76,7 +76,7 @@ const sections: NavSection[] = [
     items: [
       { label: "Evidence Vault", href: "/command-center/results", icon: Vault },
       { label: "Verification", href: "/command-center/results", icon: CheckSquare },
-      { label: "Audit Logs", icon: ScrollText, sprint: 11 },
+      { label: "Audit Logs", href: "/command-center/audit-logs", icon: ScrollText },
     ],
   },
   {
