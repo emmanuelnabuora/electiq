@@ -26,7 +26,14 @@ export async function getResultsAggregate(electionId: string) {
     (await db.electionPosition.findFirst({ where: { electionId, name: "President" } })) ??
     (await db.electionPosition.findFirst({ where: { electionId }, orderBy: { id: "asc" } }));
 
-  const totalStations = await db.pollingStation.count();
+  const election = await db.election.findUniqueOrThrow({ where: { id: electionId }, select: { countryId: true } });
+  // Scoped to the election's own country -- an unscoped count() here would
+  // include every polling station in the database regardless of which
+  // election/country they belong to, which silently became wrong the
+  // moment a second country's geography existed in the same database.
+  const totalStations = await db.pollingStation.count({
+    where: { pollingCenter: { unit: { level: { countryId: election.countryId } } } },
+  });
 
   if (!referencePosition) {
     return {

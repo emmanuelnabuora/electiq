@@ -32,7 +32,10 @@ export async function getRemainingReportProjection(
   positionName: string
 ): Promise<RemainingReportProjection> {
   const position = await db.electionPosition.findFirst({ where: { electionId, name: positionName } });
-  const totalStations = await db.pollingStation.count();
+  const election = await db.election.findUniqueOrThrow({ where: { id: electionId }, select: { countryId: true } });
+  const totalStations = await db.pollingStation.count({
+    where: { pollingCenter: { unit: { level: { countryId: election.countryId } } } },
+  });
 
   if (!position) {
     return {

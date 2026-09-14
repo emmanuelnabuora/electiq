@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { authorize } from "@/lib/rbac";
+import { getCurrentElectionId } from "@/lib/elections/current";
 import type { ToolDefinition, ToolResult } from "@/lib/copilot/types";
 
 async function execute(userId: string, input: Record<string, unknown>): Promise<ToolResult> {
@@ -10,6 +11,11 @@ async function execute(userId: string, input: Record<string, unknown>): Promise<
 
   const query = String(input.query ?? "").trim();
   if (!query) return { data: { message: "No search query provided." }, sources: [] };
+
+  const currentElectionId = await getCurrentElectionId();
+  const currentElection = currentElectionId
+    ? await db.election.findUnique({ where: { id: currentElectionId }, select: { countryId: true } })
+    : null;
 
   const [candidates, parties, stations] = await Promise.all([
     db.candidate.findMany({
@@ -32,6 +38,11 @@ async function execute(userId: string, input: Record<string, unknown>): Promise<
           { code: { contains: query, mode: "insensitive" } },
           { name: { contains: query, mode: "insensitive" } },
         ],
+        // Scoped to the current election's country -- without this, a
+        // station-code search could match a coincidentally-similar code
+        // belonging to an entirely different country's geography once
+        // more than one country's polling stations exist in the database.
+        ...(currentElection ? { pollingCenter: { unit: { level: { countryId: currentElection.countryId } } } } : {}),
       },
       include: { pollingCenter: { include: { unit: true } } },
       take: 10,

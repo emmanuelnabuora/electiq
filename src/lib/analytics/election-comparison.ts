@@ -16,7 +16,9 @@ export type ElectionSummary = {
 async function summarizeElection(electionId: string, positionName: string): Promise<ElectionSummary> {
   const election = await db.election.findUniqueOrThrow({ where: { id: electionId } });
   const position = await db.electionPosition.findFirst({ where: { electionId, name: positionName } });
-  const totalStations = await db.pollingStation.count();
+  const totalStations = await db.pollingStation.count({
+    where: { pollingCenter: { unit: { level: { countryId: election.countryId } } } },
+  });
 
   if (!position) {
     return {
