@@ -830,6 +830,10 @@ enum AuditAction {
   MFA_DISABLED
   MFA_CHALLENGE_SUCCEEDED
   MFA_CHALLENGE_FAILED
+  USER_ACTIVATED
+  USER_DEACTIVATED
+  USER_UNLOCKED
+  ROLE_PERMISSIONS_UPDATED
 }
 
 // ─────────────────────────────────────────────────────────────────────────

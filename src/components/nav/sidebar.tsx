@@ -93,9 +93,9 @@ const sections: NavSection[] = [
   {
     title: "Administration",
     items: [
-      { label: "Users", icon: UserCog, sprint: 11 },
-      { label: "Roles", icon: KeyRound, sprint: 11 },
-      { label: "Permissions", icon: KeyRound, sprint: 11 },
+      { label: "Users", href: "/command-center/users", icon: UserCog },
+      { label: "Roles", href: "/command-center/roles", icon: KeyRound },
+      { label: "Permissions", href: "/command-center/permissions", icon: KeyRound },
       { label: "System Settings", href: "/command-center/security", icon: Settings },
     ],
   },
