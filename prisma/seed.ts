@@ -423,7 +423,9 @@ async function publishResultsForElection(
   candidateIds: string[],
   options: { skipExisting: boolean; inclusionRate: number }
 ) {
+  const election = await db.election.findUniqueOrThrow({ where: { id: electionId }, select: { countryId: true } });
   const stations = await db.pollingStation.findMany({
+    where: { pollingCenter: { unit: { level: { countryId: election.countryId } } } },
     include: { pollingCenter: { include: { unit: { include: { parent: { include: { parent: true } } } } } } },
   });
 
