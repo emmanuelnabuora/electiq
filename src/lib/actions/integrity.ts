@@ -45,8 +45,8 @@ export async function claimAlert(formData: FormData) {
     entityId: alertId,
   });
 
-  revalidatePath(`/command-center/integrity/${alertId}`);
-  revalidatePath("/command-center/integrity");
+  revalidatePath(`/integrity/${alertId}`);
+  revalidatePath("/integrity");
 }
 
 export async function resolveAlert(formData: FormData) {
@@ -72,8 +72,8 @@ export async function resolveAlert(formData: FormData) {
     newState: { reviewNotes: notes },
   });
 
-  revalidatePath(`/command-center/integrity/${alertId}`);
-  revalidatePath("/command-center/integrity");
+  revalidatePath(`/integrity/${alertId}`);
+  revalidatePath("/integrity");
 }
 
 export async function dismissAlert(formData: FormData) {
@@ -99,6 +99,6 @@ export async function dismissAlert(formData: FormData) {
     newState: { reviewNotes: notes },
   });
 
-  revalidatePath(`/command-center/integrity/${alertId}`);
-  revalidatePath("/command-center/integrity");
+  revalidatePath(`/integrity/${alertId}`);
+  revalidatePath("/integrity");
 }
