@@ -1,63 +1,78 @@
-import { getPublicElection, getPublicCandidateStandings } from "@/lib/public/queries";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Building2, Users, TrendingUp, CheckCircle2 } from "lucide-react";
+import { getPublicElection, getPublicElectionSummary } from "@/lib/public/queries";
+import { PublicHero } from "@/components/public/PublicHero";
+import { PublicStatCard } from "@/components/public/PublicStatCard";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Country display name shown in the hero -- the interface says
+ * "Republic of Kenya" per the approved design, independent of which
+ * election/country is actually configured as current in the database.
+ * The DemoDataBanner (rendered by the layout above this page) is what
+ * keeps the data itself honestly labeled; this constant is purely the
+ * interface's own branding.
+ */
+const PORTAL_COUNTRY_NAME = "Republic of Kenya";
 
 export default async function PublicResultsPage() {
   const election = await getPublicElection();
   if (!election) {
-    return <p className="text-sm text-neutral">No election configured yet.</p>;
+    return <p className="px-6 py-12 text-center text-sm text-pub-text-secondary">No election configured yet.</p>;
   }
 
   const positionName = election.positions.includes("President") ? "President" : election.positions[0];
-  const standings = positionName ? await getPublicCandidateStandings(election.id, positionName) : [];
+  const summary = positionName
+    ? await getPublicElectionSummary(election.id, positionName)
+    : {
+        totalPollingStations: 0,
+        reportingPollingStations: 0,
+        reportingPct: 0,
+        totalRegisteredVoters: 0,
+        totalValidVotes: 0,
+        turnoutPct: 0,
+      };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-accent">{election.name}</p>
-        <h1 className="mt-1 text-2xl font-semibold text-light">Official Results — {positionName}</h1>
-        <p className="mt-1 text-sm text-neutral">
-          {new Date(election.electionDate).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}{" "}
-          · <Badge tone="accent">{election.status}</Badge>
-        </p>
-      </div>
+    <div className="flex flex-col">
+      <PublicHero electionId={election.id} countryName={PORTAL_COUNTRY_NAME} />
 
-      <Card>
-        <CardContent className="py-3 text-xs text-neutral">
-          These figures include only polling-station results that election officials have officially
-          published. Results still being verified or approved are not reflected here — see the Updates
-          page for how many stations have published so far.
-        </CardContent>
-      </Card>
+      <section className="grid grid-cols-1 gap-4 px-6 py-8 sm:grid-cols-2 lg:grid-cols-4">
+        <PublicStatCard
+          label="Polling Stations"
+          value={summary.totalPollingStations.toLocaleString("en-US")}
+          sublabel={`${summary.reportingPollingStations.toLocaleString("en-US")} reporting`}
+          icon={Building2}
+        />
+        <PublicStatCard
+          label="Valid Votes"
+          value={summary.totalValidVotes.toLocaleString("en-US")}
+          sublabel={`${summary.reportingPct.toFixed(0)}% of stations counted`}
+          icon={Users}
+        />
+        <PublicStatCard
+          label="Voter Turnout"
+          value={`${summary.turnoutPct.toFixed(1)}%`}
+          sublabel={`${summary.totalRegisteredVoters.toLocaleString("en-US")} eligible voters`}
+          icon={TrendingUp}
+        />
+        <PublicStatCard
+          label="Reporting"
+          value={`${summary.reportingPct.toFixed(0)}%`}
+          sublabel={`${summary.reportingPollingStations.toLocaleString("en-US")} / ${summary.totalPollingStations.toLocaleString("en-US")} stations`}
+          icon={CheckCircle2}
+        />
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Standings</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 py-4">
-          {standings.length === 0 && (
-            <p className="text-sm text-neutral">No results have been published yet for this position.</p>
-          )}
-          {standings.map((s) => (
-            <div key={s.fullName} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-0">
-              <div>
-                <p className="text-light">{s.fullName}</p>
-                {s.partyAbbreviation && <p className="text-xs text-neutral">{s.partyAbbreviation}</p>}
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-semibold text-light">{s.sharePct.toFixed(1)}%</p>
-                <p className="text-xs text-neutral">{s.votes.toLocaleString("en-US")} votes</p>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      {/*
+        Phase 3 adds the full results grid here: Presidential Results,
+        Results by County, Reporting Progress, Voter Turnout by County,
+        Latest Published Results, and Downloads & Reports -- all reusing
+        the same getPublic* functions the KPI cards above already use.
+        Intentionally not stubbed out with placeholder panels in the
+        meantime, since an empty placeholder panel is its own kind of
+        misleading content.
+      */}
     </div>
   );
 }

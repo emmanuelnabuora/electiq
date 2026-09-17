@@ -35,6 +35,19 @@ const config: Config = {
         "eiq-warning": "#F59E0B",
         "eiq-critical": "#EF4444",
         "eiq-info": "#3B82F6",
+        // Public Portal design system (Screen 8) -- its own distinct
+        // "pub-" prefix, since its exact values (success, text colors)
+        // differ from the internal "eiq-" theme's own numbers. Two
+        // different approved specs, two different token sets.
+        "pub-blue": "#2563EB",
+        "pub-text": "#0F1F3D",
+        "pub-text-secondary": "#64748B",
+        "pub-success": "#10B981",
+        "pub-warning": "#F59E0B",
+        "pub-critical": "#EF4444",
+        "pub-bg": "#F5F8FC",
+        "pub-card": "#FFFFFF",
+        "pub-border": "#E4EAF2",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
