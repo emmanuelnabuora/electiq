@@ -128,8 +128,8 @@ export async function submitResult(formData: FormData) {
     await scanSubmission(submission.id);
   }
 
-  revalidatePath("/command-center/results");
-  redirect(`/command-center/results/${submission.id}`);
+  revalidatePath("/results/submissions");
+  redirect(`/results/submissions/${submission.id}`);
 }
 
 export async function verifyResult(formData: FormData) {
@@ -168,7 +168,7 @@ export async function verifyResult(formData: FormData) {
     newState: { decision, notes },
   });
 
-  revalidatePath(`/command-center/results/${submissionId}`);
+  revalidatePath(`/results/submissions/${submissionId}`);
 }
 
 export async function approveResult(formData: FormData) {
@@ -199,7 +199,7 @@ export async function approveResult(formData: FormData) {
     entityId: submissionId,
   });
 
-  revalidatePath(`/command-center/results/${submissionId}`);
+  revalidatePath(`/results/submissions/${submissionId}`);
 }
 
 export async function publishResult(formData: FormData) {
@@ -230,7 +230,7 @@ export async function publishResult(formData: FormData) {
     entityId: submissionId,
   });
 
-  revalidatePath(`/command-center/results/${submissionId}`);
+  revalidatePath(`/results/submissions/${submissionId}`);
   revalidatePath("/command-center");
 }
 
@@ -271,5 +271,5 @@ export async function uploadResultDocument(formData: FormData) {
     newState: { fileName: doc.fileName, sha256: doc.sha256, sizeBytes: doc.sizeBytes },
   });
 
-  revalidatePath(`/command-center/results/${submissionId}`);
+  revalidatePath(`/results/submissions/${submissionId}`);
 }
