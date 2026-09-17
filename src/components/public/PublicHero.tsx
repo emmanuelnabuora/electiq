@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { PublicSearch } from "@/components/public/PublicSearch";
 
 /**
@@ -12,17 +13,15 @@ const INSTITUTIONAL_ATTRIBUTION =
 export function PublicHero({ electionId, countryName }: { electionId: string; countryName: string }) {
   return (
     <section className="relative flex flex-col items-center justify-center overflow-hidden px-6 py-20 text-center text-white">
-      {/*
-        Temporary gradient background standing in for a real photograph.
-        A real image was not fabricated or claimed to be licensed here.
-        To swap in the real hero photo later: replace this div's
-        className with a background-image style pointing at
-        /public/images/kenya-election-hero.jpg (plus a dark overlay div
-        exactly like the one below) -- no other structural change
-        needed anywhere else in this component.
-      */}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-pub-blue via-[#1E3A6E] to-[#0F1F3D]" />
-      <div className="absolute inset-0 -z-10 bg-black/20" />
+      <Image
+        src="/images/kenya-election-hero.jpg"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        className="-z-10 object-cover"
+      />
+      <div className="absolute inset-0 -z-10 bg-black/60" />
 
       <h1 className="text-4xl font-bold sm:text-5xl">{countryName}</h1>
       <p className="mt-3 text-lg text-white/90">Transparent elections. A stronger tomorrow.</p>
