@@ -146,8 +146,16 @@ export type PollingCenterPoint = {
   registeredVoters: number;
 };
 
-/** Returns every polling center that has coordinates, for map markers. */
-export async function getPollingCenterPoints(): Promise<PollingCenterPoint[]> {
+/**
+ * Returns every polling center that has coordinates, for map markers.
+ * Scoped to one country -- without this, once a second country's
+ * polling centers also have real coordinates, this would silently mix
+ * markers from both onto the same map. Currently latent (only the demo
+ * country has any coordinates at all right now) but fixed proactively
+ * while this function was already being touched, rather than left as a
+ * known-bad pattern for a future country import to activate.
+ */
+export async function getPollingCenterPoints(countryId: string): Promise<PollingCenterPoint[]> {
   const rows = await sharedDb.$queryRaw<
     Array<{
       id: string;
@@ -164,8 +172,11 @@ export async function getPollingCenterPoints(): Promise<PollingCenterPoint[]> {
       COUNT(ps.id) AS "stationCount",
       COALESCE(SUM(ps."registeredVoters"), 0) AS "registeredVoters"
     FROM polling_centers pc
+    JOIN administrative_units au ON au.id = pc."unitId"
+    JOIN administrative_levels al ON al.id = au."levelId"
     LEFT JOIN polling_stations ps ON ps."pollingCenterId" = pc.id
     WHERE pc.latitude IS NOT NULL AND pc.longitude IS NOT NULL
+      AND al."countryId" = ${countryId}
     GROUP BY pc.id, pc.name, pc.code, pc.latitude, pc.longitude
     ORDER BY pc.name
   `;

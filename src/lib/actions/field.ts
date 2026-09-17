@@ -52,7 +52,7 @@ export async function assignObserver(formData: FormData) {
     newState: { observerId: observer.id, pollingStationId },
   });
 
-  revalidatePath("/command-center/field");
+  revalidatePath("/field-operations/assignments");
 }
 
 export async function acceptAssignment(formData: FormData) {
@@ -77,7 +77,7 @@ export async function acceptAssignment(formData: FormData) {
     entityId: assignmentId,
   });
 
-  revalidatePath("/command-center/field");
+  revalidatePath("/field-operations/assignments");
 }
 
 export async function checkIn(formData: FormData) {
@@ -112,7 +112,7 @@ export async function checkIn(formData: FormData) {
     newState: { latitude, longitude },
   });
 
-  revalidatePath("/command-center/field");
+  revalidatePath("/field-operations/assignments");
 }
 
 /**
@@ -198,5 +198,5 @@ export async function submitFieldReport(formData: FormData) {
     newState: { type, assignmentId },
   });
 
-  revalidatePath("/command-center/field");
+  revalidatePath("/field-operations/assignments");
 }
