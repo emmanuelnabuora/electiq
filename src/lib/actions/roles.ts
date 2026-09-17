@@ -98,7 +98,7 @@ export async function updateRolePermissions(formData: FormData) {
     reason: `Role ${role.name} permissions set to ${permissionIds.length} permission(s)`,
   });
 
-  revalidatePath("/command-center/roles");
-  revalidatePath(`/command-center/roles/${roleId}`);
-  revalidatePath("/command-center/permissions");
+  revalidatePath("/users/roles");
+  revalidatePath(`/users/roles/${roleId}`);
+  revalidatePath("/users/permissions");
 }

@@ -44,11 +44,11 @@ const sections: NavSection[] = [
   {
     title: "Election",
     items: [
-      { label: "Elections", href: "/command-center/elections", icon: Vote },
-      { label: "Candidates", href: "/command-center/elections", icon: Users2 },
-      { label: "Parties", href: "/command-center/elections", icon: Flag },
+      { label: "Elections", href: "/elections", icon: Vote },
+      { label: "Candidates", href: "/elections", icon: Users2 },
+      { label: "Parties", href: "/elections", icon: Flag },
       { label: "Polling Stations", href: "/command-center/polling-stations", icon: MapPin },
-      { label: "Results", href: "/command-center/results", icon: BarChart3 },
+      { label: "Results", href: "/results", icon: BarChart3 },
       { label: "Turnout", href: "/command-center/turnout", icon: Radar },
       { label: "Election Map", href: "/command-center/election-map", icon: Globe },
     ],
@@ -56,9 +56,9 @@ const sections: NavSection[] = [
   {
     title: "Operations",
     items: [
-      { label: "Incidents", href: "/command-center/incidents", icon: ShieldAlert },
-      { label: "Observers", href: "/command-center/field", icon: Eye },
-      { label: "Field Reports", href: "/command-center/field", icon: ClipboardList },
+      { label: "Incidents", href: "/incidents", icon: ShieldAlert },
+      { label: "Observers", href: "/field-operations/assignments", icon: Eye },
+      { label: "Field Reports", href: "/field-operations/assignments", icon: ClipboardList },
     ],
   },
   {
@@ -66,7 +66,7 @@ const sections: NavSection[] = [
     items: [
       { label: "Analytics", href: "/command-center/analytics", icon: BarChart3 },
       { label: "ElectIQ Copilot", href: "/command-center/copilot", icon: Sparkles },
-      { label: "Integrity Alerts", href: "/command-center/integrity", icon: ShieldAlert },
+      { label: "Integrity Alerts", href: "/integrity", icon: ShieldAlert },
       { label: "Historical Analytics", href: "/command-center/analytics", icon: History },
       { label: "Scenario Lab", href: "/command-center/scenarios", icon: FlaskConical },
     ],
@@ -74,8 +74,8 @@ const sections: NavSection[] = [
   {
     title: "Assurance",
     items: [
-      { label: "Evidence Vault", href: "/command-center/results", icon: Vault },
-      { label: "Verification", href: "/command-center/results", icon: CheckSquare },
+      { label: "Evidence Vault", href: "/results/submissions", icon: Vault },
+      { label: "Verification", href: "/results/submissions", icon: CheckSquare },
       { label: "Audit Logs", href: "/command-center/audit-logs", icon: ScrollText },
     ],
   },
@@ -87,15 +87,15 @@ const sections: NavSection[] = [
     title: "Publication",
     items: [
       { label: "Public Portal", href: "/public", icon: Globe },
-      { label: "API Management", href: "/command-center/api-management", icon: Plug },
+      { label: "API Management", href: "/api-management", icon: Plug },
     ],
   },
   {
     title: "Administration",
     items: [
-      { label: "Users", href: "/command-center/users", icon: UserCog },
-      { label: "Roles", href: "/command-center/roles", icon: KeyRound },
-      { label: "Permissions", href: "/command-center/permissions", icon: KeyRound },
+      { label: "Users", href: "/users", icon: UserCog },
+      { label: "Roles", href: "/users/roles", icon: KeyRound },
+      { label: "Permissions", href: "/users/permissions", icon: KeyRound },
       { label: "System Settings", href: "/command-center/security", icon: Settings },
     ],
   },

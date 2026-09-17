@@ -93,7 +93,7 @@ export function UserManagement({
       <div className="flex justify-end">
         <Button onClick={() => setShowCreate((v) => !v)}>
           <UserPlus className="h-4 w-4" />
-          New User
+          Invite User
         </Button>
       </div>
 
@@ -151,6 +151,7 @@ export function UserManagement({
               <tr className="text-xs text-neutral">
                 <th className="py-2 font-medium">Name</th>
                 <th className="py-2 font-medium">Roles</th>
+                <th className="py-2 font-medium">Geographic Scope</th>
                 <th className="py-2 font-medium">Status</th>
                 <th className="py-2 font-medium">MFA</th>
                 <th className="py-2 font-medium">Last login</th>
@@ -167,6 +168,11 @@ export function UserManagement({
                     </td>
                     <td className="py-2 text-neutral">
                       {u.roles.map((ur) => ur.role.name).join(", ")}
+                    </td>
+                    <td className="py-2 text-neutral">
+                      {u.scopes.some((s) => s.isNational)
+                        ? "National"
+                        : u.scopes.map((s) => s.scopeUnit?.name).filter(Boolean).join(", ") || "—"}
                     </td>
                     <td className="py-2">
                       {u.lockedUntil && new Date(u.lockedUntil) > new Date() ? (
@@ -213,7 +219,7 @@ export function UserManagement({
                   </tr>
                   {editingUserId === u.id && (
                     <tr key={`${u.id}-edit`} className="border-t border-white/5 bg-white/[0.02]">
-                      <td colSpan={6} className="py-3">
+                      <td colSpan={7} className="py-3">
                         <form action={handleUpdateRoles} className="flex flex-col gap-2 px-2">
                           <input type="hidden" name="userId" value={u.id} />
                           <p className="text-xs text-neutral">Editing roles for {u.name}</p>

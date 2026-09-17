@@ -48,7 +48,7 @@ export async function createApiKey(formData: FormData) {
     reason: `Created API key "${name}"`,
   });
 
-  revalidatePath("/command-center/api-management");
+  revalidatePath("/api-management");
   return { rawKey };
 }
 
@@ -65,5 +65,5 @@ export async function revokeApiKey(formData: FormData) {
     reason: `Revoked API key "${key.name}"`,
   });
 
-  revalidatePath("/command-center/api-management");
+  revalidatePath("/api-management");
 }

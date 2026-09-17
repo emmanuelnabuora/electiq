@@ -72,7 +72,7 @@ export async function createUser(formData: FormData) {
     reason: `Created user ${email} with ${roleIds.length} role(s)`,
   });
 
-  revalidatePath("/command-center/users");
+  revalidatePath("/users");
   return { id: user.id };
 }
 
@@ -92,7 +92,7 @@ export async function setUserActive(formData: FormData) {
     reason: `User ${userId} set to ${active ? "active" : "inactive"}`,
   });
 
-  revalidatePath("/command-center/users");
+  revalidatePath("/users");
 }
 
 export async function unlockUser(formData: FormData) {
@@ -106,7 +106,7 @@ export async function unlockUser(formData: FormData) {
     reason: `Cleared lockout for user ${userId}`,
   });
 
-  revalidatePath("/command-center/users");
+  revalidatePath("/users");
 }
 
 export async function updateUserRoles(formData: FormData) {
@@ -134,7 +134,7 @@ export async function updateUserRoles(formData: FormData) {
     reason: `User ${userId} roles set to [${roleIds.join(", ")}]`,
   });
 
-  revalidatePath("/command-center/users");
+  revalidatePath("/users");
 }
 
 async function roleSetGrants(roleIds: string[], resource: string, action: string): Promise<boolean> {

@@ -169,6 +169,7 @@ export async function verifyResult(formData: FormData) {
   });
 
   revalidatePath(`/results/submissions/${submissionId}`);
+  revalidatePath("/results");
 }
 
 export async function approveResult(formData: FormData) {
@@ -200,6 +201,7 @@ export async function approveResult(formData: FormData) {
   });
 
   revalidatePath(`/results/submissions/${submissionId}`);
+  revalidatePath("/results");
 }
 
 export async function publishResult(formData: FormData) {
@@ -231,6 +233,7 @@ export async function publishResult(formData: FormData) {
   });
 
   revalidatePath(`/results/submissions/${submissionId}`);
+  revalidatePath("/results");
   revalidatePath("/command-center");
 }
 
