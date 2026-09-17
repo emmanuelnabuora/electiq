@@ -4,6 +4,7 @@ import {
   getPublicElectionSummary,
   getPublicCandidateStandings,
   getPublicRegionalResults,
+  getPublicRegionsWithBoundaries,
   getPublicUpdates,
 } from "@/lib/public/queries";
 import { PublicHero } from "@/components/public/PublicHero";
@@ -35,11 +36,12 @@ export default async function PublicResultsPage() {
 
   const positionName = election.positions.includes("President") ? "President" : election.positions[0];
 
-  const [summary, standings, regions, updates] = positionName
+  const [summary, standings, regions, geoRegions, updates] = positionName
     ? await Promise.all([
         getPublicElectionSummary(election.id, positionName),
         getPublicCandidateStandings(election.id, positionName),
         getPublicRegionalResults(election.id, positionName, 0),
+        getPublicRegionsWithBoundaries(election.id, positionName),
         getPublicUpdates(election.id, positionName, 15),
       ])
     : [
@@ -53,6 +55,7 @@ export default async function PublicResultsPage() {
           totalValidVotes: 0,
           turnoutPct: 0,
         },
+        [],
         [],
         [],
         [],
@@ -91,7 +94,7 @@ export default async function PublicResultsPage() {
 
       <section id="turnout" className="grid grid-cols-1 gap-4 px-6 pb-8 lg:grid-cols-[36%_34%_30%]">
         <PresidentialResults standings={standings} />
-        <CountyResultsTable regions={regions} />
+        <CountyResultsTable regions={regions} geoRegions={geoRegions} />
         <ReportingProgress
           reportingPollingStations={summary.reportingPollingStations}
           pendingPollingStations={summary.pendingPollingStations}

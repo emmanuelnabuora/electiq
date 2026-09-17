@@ -1,14 +1,21 @@
 import Link from "next/link";
-import type { PublicRegionResult } from "@/lib/public/queries";
+import type { PublicRegionResult, PublicRegionGeo } from "@/lib/public/queries";
+import { KenyaResultsMap } from "@/components/public/KenyaResultsMapLoader";
 
 /**
  * The compact county table half of the approved design's "Results by
- * County" panel. The map half (KenyaResultsMap) is deliberately not
- * built here -- it's Phase 4's own scope, since it needs a real,
- * verified Kenya county boundary dataset that hasn't been sourced yet,
- * and the plan is explicit that fabricating geometry isn't acceptable.
+ * County" panel, plus the map itself (KenyaResultsMap) -- which renders
+ * real polygons when boundary data exists and an honest "not available"
+ * state when it doesn't, rather than two separately-maintained
+ * placeholder and real versions.
  */
-export function CountyResultsTable({ regions }: { regions: PublicRegionResult[] }) {
+export function CountyResultsTable({
+  regions,
+  geoRegions,
+}: {
+  regions: PublicRegionResult[];
+  geoRegions: PublicRegionGeo[];
+}) {
   const sorted = [...regions].sort((a, b) => b.turnoutPct - a.turnoutPct);
 
   return (
@@ -20,12 +27,11 @@ export function CountyResultsTable({ regions }: { regions: PublicRegionResult[] 
         </Link>
       </div>
 
-      <p className="mb-3 text-xs text-pub-text-secondary">
-        The interactive county map is not available in this preview -- see the follow-up plan for
-        adding verified county boundary data.
-      </p>
+      <div className="mb-4">
+        <KenyaResultsMap regions={geoRegions} />
+      </div>
 
-      <div className="max-h-80 overflow-y-auto">
+      <div className="max-h-64 overflow-y-auto">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="text-xs text-pub-text-secondary">
