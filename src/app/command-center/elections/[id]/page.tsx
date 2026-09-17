@@ -11,6 +11,7 @@ import {
   addParty,
   addCandidate,
   deleteCandidate,
+  updateCandidatePhoto,
   updateElectionStatus,
 } from "@/lib/actions/elections";
 
@@ -155,21 +156,56 @@ export default async function ElectionDetailPage({ params }: { params: Promise<{
                 {position.candidates.map((c) => (
                   <div
                     key={c.id}
-                    className="flex items-center justify-between rounded-md border border-white/5 px-3 py-2 text-sm"
+                    className="flex items-center justify-between gap-3 rounded-md border border-white/5 px-3 py-2 text-sm"
                   >
-                    <span className="text-light">
-                      {c.fullName}
-                      {c.party && <span className="ml-2 text-neutral">({c.party.abbreviation})</span>}
-                    </span>
-                    {canUpdate && (
-                      <form action={deleteCandidate}>
-                        <input type="hidden" name="candidateId" value={c.id} />
-                        <input type="hidden" name="electionId" value={election.id} />
-                        <Button type="submit" variant="ghost">
-                          Remove
-                        </Button>
-                      </form>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {c.photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={c.photoUrl}
+                          alt={c.fullName}
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-medium text-light">
+                          {c.fullName
+                            .split(" ")
+                            .map((p) => p[0])
+                            .slice(0, 2)
+                            .join("")
+                            .toUpperCase()}
+                        </span>
+                      )}
+                      <span className="text-light">
+                        {c.fullName}
+                        {c.party && <span className="ml-2 text-neutral">({c.party.abbreviation})</span>}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {canUpdate && (
+                        <form action={updateCandidatePhoto} className="flex items-center gap-1.5">
+                          <input type="hidden" name="candidateId" value={c.id} />
+                          <Input
+                            name="photoUrl"
+                            defaultValue={c.photoUrl ?? ""}
+                            placeholder="https://... photo URL"
+                            className="w-48 text-xs"
+                          />
+                          <Button type="submit" variant="ghost">
+                            Save
+                          </Button>
+                        </form>
+                      )}
+                      {canUpdate && (
+                        <form action={deleteCandidate}>
+                          <input type="hidden" name="candidateId" value={c.id} />
+                          <input type="hidden" name="electionId" value={election.id} />
+                          <Button type="submit" variant="ghost">
+                            Remove
+                          </Button>
+                        </form>
+                      )}
+                    </div>
                   </div>
                 ))}
                 {position.candidates.length === 0 && (
@@ -180,6 +216,7 @@ export default async function ElectionDetailPage({ params }: { params: Promise<{
                     <input type="hidden" name="electionId" value={election.id} />
                     <input type="hidden" name="positionId" value={position.id} />
                     <Input name="fullName" placeholder="Candidate name" required />
+                    <Input name="photoUrl" placeholder="https://... photo URL (optional)" className="w-56" />
                     <select
                       name="partyId"
                       defaultValue=""

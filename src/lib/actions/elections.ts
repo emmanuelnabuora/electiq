@@ -134,9 +134,10 @@ export async function addCandidate(formData: FormData) {
   const positionId = str(formData, "positionId");
   const fullName = str(formData, "fullName");
   const partyId = (formData.get("partyId") as string | null) || null;
+  const photoUrl = (formData.get("photoUrl") as string | null)?.trim() || null;
 
   const candidate = await db.candidate.create({
-    data: { electionId, positionId, fullName, partyId },
+    data: { electionId, positionId, fullName, partyId, photoUrl },
   });
 
   await recordAudit({
@@ -144,10 +145,45 @@ export async function addCandidate(formData: FormData) {
     action: "CANDIDATE_CREATED",
     entityType: "Candidate",
     entityId: candidate.id,
-    newState: { fullName, positionId, partyId },
+    newState: { fullName, positionId, partyId, photoUrl },
   });
 
   revalidatePath(`/elections/${electionId}`);
+}
+
+export async function updateCandidatePhoto(formData: FormData) {
+  const session = await requireSession();
+  await requirePermission(session.user.id, "elections", "update");
+
+  const candidateId = str(formData, "candidateId");
+  const photoUrl = (formData.get("photoUrl") as string | null)?.trim() || null;
+
+  if (photoUrl) {
+    let parsed: URL;
+    try {
+      parsed = new URL(photoUrl);
+    } catch {
+      throw new ActionError("That doesn't look like a valid URL.");
+    }
+    if (parsed.protocol !== "https:") {
+      throw new ActionError("Photo URL must use https:// (a plain http:// link won't load securely).");
+    }
+  }
+
+  const candidate = await db.candidate.update({
+    where: { id: candidateId },
+    data: { photoUrl },
+  });
+
+  await recordAudit({
+    actorId: session.user.id,
+    action: "CANDIDATE_UPDATED",
+    entityType: "Candidate",
+    entityId: candidateId,
+    newState: { photoUrl },
+  });
+
+  revalidatePath(`/elections/${candidate.electionId}`);
 }
 
 export async function deleteCandidate(formData: FormData) {

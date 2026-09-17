@@ -4,6 +4,7 @@ export type CandidateStanding = {
   candidateId: string;
   fullName: string;
   partyAbbreviation: string | null;
+  photoUrl: string | null;
   votes: number;
   sharePct: number;
 };
@@ -49,6 +50,7 @@ export async function getCandidateStandings(
         candidateId: c.id,
         fullName: c.fullName,
         partyAbbreviation: c.party?.abbreviation ?? null,
+        photoUrl: c.photoUrl,
         votes,
         sharePct: totalVotes > 0 ? (votes / totalVotes) * 100 : 0,
       };

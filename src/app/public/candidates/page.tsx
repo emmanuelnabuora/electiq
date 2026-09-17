@@ -29,7 +29,22 @@ export default async function PublicCandidatesPage() {
           <CardContent className="flex flex-col gap-2 py-4">
             {position.candidates.map((c) => (
               <div key={c.id} className="flex items-center justify-between border-b border-white/5 pb-2 last:border-0">
-                <span className="text-light">{c.fullName}</span>
+                <div className="flex items-center gap-3">
+                  {c.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={c.photoUrl} alt={c.fullName} className="h-9 w-9 rounded-full object-cover" />
+                  ) : (
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-xs font-medium text-light">
+                      {c.fullName
+                        .split(" ")
+                        .map((p) => p[0])
+                        .slice(0, 2)
+                        .join("")
+                        .toUpperCase()}
+                    </span>
+                  )}
+                  <span className="text-light">{c.fullName}</span>
+                </div>
                 {c.party && <Badge>{c.party.abbreviation}</Badge>}
               </div>
             ))}

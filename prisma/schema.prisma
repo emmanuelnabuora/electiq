@@ -358,6 +358,14 @@ model Candidate {
   positionId String
   partyId    String?
   fullName   String
+  // Publicly displayable headshot -- a URL, not a stored blob. Candidate
+  // photos are public-facing promotional content (shown on the public
+  // results portal), unlike incident/result evidence, which is
+  // encrypted at rest specifically because it's sensitive. Storing a
+  // URL keeps this app out of the business of hosting/serving image
+  // bytes itself; the admin pastes a link to wherever the photo is
+  // already hosted.
+  photoUrl   String?
 
   election Election         @relation(fields: [electionId], references: [id], onDelete: Cascade)
   position ElectionPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
