@@ -1,7 +1,19 @@
 import { Building2, Users, TrendingUp, CheckCircle2 } from "lucide-react";
-import { getPublicElection, getPublicElectionSummary } from "@/lib/public/queries";
+import {
+  getPublicElection,
+  getPublicElectionSummary,
+  getPublicCandidateStandings,
+  getPublicRegionalResults,
+  getPublicUpdates,
+} from "@/lib/public/queries";
 import { PublicHero } from "@/components/public/PublicHero";
 import { PublicStatCard } from "@/components/public/PublicStatCard";
+import { PresidentialResults } from "@/components/public/PresidentialResults";
+import { CountyResultsTable } from "@/components/public/CountyResultsTable";
+import { ReportingProgress } from "@/components/public/ReportingProgress";
+import { CountyTurnoutChart } from "@/components/public/CountyTurnoutChart";
+import { LatestPublishedResults } from "@/components/public/LatestPublishedResults";
+import { ReportDownload } from "@/components/public/ReportDownload";
 
 export const dynamic = "force-dynamic";
 
@@ -22,19 +34,32 @@ export default async function PublicResultsPage() {
   }
 
   const positionName = election.positions.includes("President") ? "President" : election.positions[0];
-  const summary = positionName
-    ? await getPublicElectionSummary(election.id, positionName)
-    : {
-        totalPollingStations: 0,
-        reportingPollingStations: 0,
-        reportingPct: 0,
-        totalRegisteredVoters: 0,
-        totalValidVotes: 0,
-        turnoutPct: 0,
-      };
+
+  const [summary, standings, regions, updates] = positionName
+    ? await Promise.all([
+        getPublicElectionSummary(election.id, positionName),
+        getPublicCandidateStandings(election.id, positionName),
+        getPublicRegionalResults(election.id, positionName, 0),
+        getPublicUpdates(election.id, positionName, 15),
+      ])
+    : [
+        {
+          totalPollingStations: 0,
+          reportingPollingStations: 0,
+          pendingPollingStations: 0,
+          notReportingPollingStations: 0,
+          reportingPct: 0,
+          totalRegisteredVoters: 0,
+          totalValidVotes: 0,
+          turnoutPct: 0,
+        },
+        [],
+        [],
+        [],
+      ];
 
   return (
-    <div className="flex flex-col">
+    <div id="results" className="flex flex-col">
       <PublicHero electionId={election.id} countryName={PORTAL_COUNTRY_NAME} />
 
       <section className="grid grid-cols-1 gap-4 px-6 py-8 sm:grid-cols-2 lg:grid-cols-4">
@@ -64,15 +89,25 @@ export default async function PublicResultsPage() {
         />
       </section>
 
-      {/*
-        Phase 3 adds the full results grid here: Presidential Results,
-        Results by County, Reporting Progress, Voter Turnout by County,
-        Latest Published Results, and Downloads & Reports -- all reusing
-        the same getPublic* functions the KPI cards above already use.
-        Intentionally not stubbed out with placeholder panels in the
-        meantime, since an empty placeholder panel is its own kind of
-        misleading content.
-      */}
+      <section id="turnout" className="grid grid-cols-1 gap-4 px-6 pb-8 lg:grid-cols-[36%_34%_30%]">
+        <PresidentialResults standings={standings} />
+        <CountyResultsTable regions={regions} />
+        <ReportingProgress
+          reportingPollingStations={summary.reportingPollingStations}
+          pendingPollingStations={summary.pendingPollingStations}
+          notReportingPollingStations={summary.notReportingPollingStations}
+          reportingPct={summary.reportingPct}
+        />
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 px-6 pb-8 lg:grid-cols-2">
+        <CountyTurnoutChart regions={regions} />
+        <LatestPublishedResults updates={updates} />
+      </section>
+
+      <section className="px-6 pb-10">
+        <ReportDownload electionId={election.id} />
+      </section>
     </div>
   );
 }

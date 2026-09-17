@@ -232,6 +232,8 @@ export async function getPublicUpdates(electionId: string, positionName: string,
 export type PublicElectionSummary = {
   totalPollingStations: number;
   reportingPollingStations: number;
+  pendingPollingStations: number;
+  notReportingPollingStations: number;
   reportingPct: number;
   totalRegisteredVoters: number;
   totalValidVotes: number;
@@ -247,11 +249,20 @@ export type PublicElectionSummary = {
  * exactly totalValidVotes/registeredVoters computed from PUBLISHED
  * submissions only, same rule as everywhere else in this file -- this
  * function adds no new relaxation of that boundary, only arithmetic.
+ *
+ * pendingPollingStations is a bare COUNT of stations with a submission
+ * that exists but isn't published yet -- not its content, its status,
+ * or who touched it, so this doesn't cross the same line as exposing
+ * AuditLog/verification-comment/submitter-identity data would. "Some
+ * precincts have reported partial counts" is normal, honest election
+ * coverage; it is not the same disclosure as showing what's IN an
+ * unpublished submission.
  */
 export async function getPublicElectionSummary(
   electionId: string,
   positionName: string
 ): Promise<PublicElectionSummary> {
+  const position = await db.electionPosition.findFirst({ where: { electionId, name: positionName } });
   const regions = await getPublicRegionalResults(electionId, positionName, 0);
 
   const totalPollingStations = regions.reduce((sum, r) => sum + r.totalStations, 0);
@@ -259,9 +270,37 @@ export async function getPublicElectionSummary(
   const totalRegisteredVoters = regions.reduce((sum, r) => sum + r.registeredVoters, 0);
   const totalValidVotes = regions.reduce((sum, r) => sum + r.votesCast, 0);
 
+  const publishedStationIds = position
+    ? new Set(
+        (
+          await db.resultSubmission.findMany({
+            where: { electionId, positionId: position.id, status: "PUBLISHED" },
+            select: { pollingStationId: true },
+          })
+        ).map((r) => r.pollingStationId)
+      )
+    : new Set<string>();
+
+  const pendingPollingStations = position
+    ? await db.resultSubmission
+        .findMany({
+          where: { electionId, positionId: position.id, status: { not: "PUBLISHED" } },
+          select: { pollingStationId: true },
+          distinct: ["pollingStationId"],
+        })
+        .then((rows) => rows.filter((r) => !publishedStationIds.has(r.pollingStationId)).length)
+    : 0;
+
+  const notReportingPollingStations = Math.max(
+    0,
+    totalPollingStations - reportingPollingStations - pendingPollingStations
+  );
+
   return {
     totalPollingStations,
     reportingPollingStations,
+    pendingPollingStations,
+    notReportingPollingStations,
     reportingPct: totalPollingStations > 0 ? (reportingPollingStations / totalPollingStations) * 100 : 0,
     totalRegisteredVoters,
     totalValidVotes,

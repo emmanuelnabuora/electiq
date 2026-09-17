@@ -125,7 +125,13 @@ describe("Public Portal — never exposes unpublished data (Section 31)", () => 
     const position = await db.electionPosition.findFirstOrThrow({
       where: { electionId: ELECTION_ID, name: "President" },
     });
-    const station = await db.pollingStation.findFirstOrThrow({ skip: 30 });
+    // Deliberately pick a station with NO existing submission at all
+    // (not just skip an arbitrary offset) -- otherwise this test could
+    // land on a station that's already reporting, where the function
+    // correctly declines to also double-count it as "pending".
+    const stationWithNoSubmission = await db.pollingStation.findFirstOrThrow({
+      where: { resultSubmissions: { none: { electionId: ELECTION_ID, positionId: position.id } } },
+    });
 
     const before = await getPublicElectionSummary(ELECTION_ID, "President");
 
@@ -133,7 +139,7 @@ describe("Public Portal — never exposes unpublished data (Section 31)", () => 
       data: {
         electionId: ELECTION_ID,
         positionId: position.id,
-        pollingStationId: station.id,
+        pollingStationId: stationWithNoSubmission.id,
         version: 9410,
         status: "AWAITING_REVIEW",
         registeredVoters: 888888,
@@ -148,6 +154,11 @@ describe("Public Portal — never exposes unpublished data (Section 31)", () => 
     const after = await getPublicElectionSummary(ELECTION_ID, "President");
     expect(after.totalValidVotes).toBe(before.totalValidVotes);
     expect(after.reportingPollingStations).toBe(before.reportingPollingStations);
+    // The station now shows up as "pending" (a bare count, not its
+    // content) rather than silently vanishing or being miscounted as
+    // reporting.
+    expect(after.pendingPollingStations).toBe(before.pendingPollingStations + 1);
+    expect(after.totalPollingStations).toBe(before.totalPollingStations);
   });
 
   it("searchPublicUnits never returns vote counts, turnout, or any result-shaped field", async () => {
