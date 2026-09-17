@@ -51,8 +51,8 @@ export async function reportIncident(formData: FormData) {
     newState: { title, severity, pollingStationId },
   });
 
-  revalidatePath("/command-center/incidents");
-  redirect(`/command-center/incidents/${incident.id}`);
+  revalidatePath("/incidents");
+  redirect(`/incidents/${incident.id}`);
 }
 
 export async function uploadIncidentEvidence(formData: FormData) {
@@ -89,7 +89,7 @@ export async function uploadIncidentEvidence(formData: FormData) {
     newState: { fileName: doc.fileName, sha256: doc.sha256 },
   });
 
-  revalidatePath(`/command-center/incidents/${incidentId}`);
+  revalidatePath(`/incidents/${incidentId}`);
 }
 
 async function loadIncidentAndAuthorizeReview(incidentId: string, userId: string) {
@@ -115,8 +115,8 @@ export async function acknowledgeIncident(formData: FormData) {
     entityType: "Incident",
     entityId: incidentId,
   });
-  revalidatePath(`/command-center/incidents/${incidentId}`);
-  revalidatePath("/command-center/incidents");
+  revalidatePath(`/incidents/${incidentId}`);
+  revalidatePath("/incidents");
 }
 
 export async function resolveIncident(formData: FormData) {
@@ -140,8 +140,8 @@ export async function resolveIncident(formData: FormData) {
     entityId: incidentId,
     newState: { reviewNotes },
   });
-  revalidatePath(`/command-center/incidents/${incidentId}`);
-  revalidatePath("/command-center/incidents");
+  revalidatePath(`/incidents/${incidentId}`);
+  revalidatePath("/incidents");
 }
 
 export async function dismissIncident(formData: FormData) {
@@ -165,6 +165,6 @@ export async function dismissIncident(formData: FormData) {
     entityId: incidentId,
     newState: { reviewNotes },
   });
-  revalidatePath(`/command-center/incidents/${incidentId}`);
-  revalidatePath("/command-center/incidents");
+  revalidatePath(`/incidents/${incidentId}`);
+  revalidatePath("/incidents");
 }
