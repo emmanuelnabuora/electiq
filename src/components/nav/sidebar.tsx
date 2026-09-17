@@ -39,7 +39,7 @@ type NavSection = {
 const sections: NavSection[] = [
   {
     title: "Command",
-    items: [{ label: "Command Center", href: "/command-center", icon: LayoutDashboard }],
+    items: [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard }],
   },
   {
     title: "Election",

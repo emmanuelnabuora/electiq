@@ -234,7 +234,7 @@ export async function publishResult(formData: FormData) {
 
   revalidatePath(`/results/submissions/${submissionId}`);
   revalidatePath("/results");
-  revalidatePath("/command-center");
+  revalidatePath("/dashboard");
 }
 
 export async function uploadResultDocument(formData: FormData) {

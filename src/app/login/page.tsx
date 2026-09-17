@@ -50,7 +50,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/command-center");
+    router.push("/dashboard");
     router.refresh();
   }
 

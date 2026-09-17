@@ -3,5 +3,5 @@ import { getCurrentSession } from "@/lib/session";
 
 export default async function RootPage() {
   const session = await getCurrentSession();
-  redirect(session?.user ? "/command-center" : "/login");
+  redirect(session?.user ? "/dashboard" : "/login");
 }
