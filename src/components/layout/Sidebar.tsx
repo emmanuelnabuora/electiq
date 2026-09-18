@@ -15,6 +15,9 @@ import {
   Plug,
   Users2,
   Flag,
+  Building2,
+  Radar,
+  Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +45,9 @@ const NAV_ITEMS = [
   { label: "Elections", href: "/elections", icon: Vote },
   { label: "Candidates", href: "/elections/candidates", icon: Users2 },
   { label: "Parties", href: "/elections/parties", icon: Flag },
+  { label: "Polling Stations", href: "/polling-stations", icon: Building2 },
+  { label: "Turnout", href: "/turnout", icon: Radar },
+  { label: "Election Map", href: "/election-map", icon: Globe },
   { label: "Results", href: "/results", icon: BarChart3 },
   { label: "Field Operations", href: "/field-operations", icon: MapPinned },
   { label: "Incidents", href: "/incidents", icon: ShieldAlert },

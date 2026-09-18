@@ -50,8 +50,8 @@ const sections: NavSection[] = [
       { label: "Parties", href: "/elections", icon: Flag },
       { label: "Polling Stations", href: "/command-center/polling-stations", icon: MapPin },
       { label: "Results", href: "/results", icon: BarChart3 },
-      { label: "Turnout", href: "/command-center/turnout", icon: Radar },
-      { label: "Election Map", href: "/command-center/election-map", icon: Globe },
+      { label: "Turnout", href: "/turnout", icon: Radar },
+      { label: "Election Map", href: "/election-map", icon: Globe },
     ],
   },
   {

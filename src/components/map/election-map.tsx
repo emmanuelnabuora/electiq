@@ -6,18 +6,31 @@ import type { Layer, LeafletMouseEvent } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { fetchUnitsAtDepth, fetchPollingCenterPoints } from "@/lib/actions/gis";
+import { fetchUnitsAtDepth, fetchPollingCenterPoints, fetchTurnoutByUnit } from "@/lib/actions/gis";
 import type { UnitGeoFeature, PollingCenterPoint } from "@/lib/gis";
 
 const LEVEL_LABELS = ["Region", "Constituency", "Ward"];
 const KARIBU_CENTER: [number, number] = [-1.0, 37.0]; // [lat, lng]
 
-function colorFor(registeredVoters: number, max: number) {
+function colorForVoters(registeredVoters: number, max: number) {
   if (max === 0) return "#334155";
   const t = Math.min(1, registeredVoters / max);
   // Interpolate from the panel navy toward the accent blue as voter count rises.
   const from = { r: 0x11, g: 0x1f, b: 0x30 };
   const to = { r: 0x2f, g: 0x80, b: 0xed };
+  const r = Math.round(from.r + (to.r - from.r) * t);
+  const g = Math.round(from.g + (to.g - from.g) * t);
+  const b = Math.round(from.b + (to.b - from.b) * t);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+// Real turnout %, computed from real reporting data (getGeographicBreakdown
+// via fetchTurnoutByUnit) -- never a fabricated gradient. Green scale so it
+// reads distinctly from the blue voter-count scale above.
+function colorForTurnout(turnoutPct: number) {
+  const t = Math.min(1, turnoutPct / 100);
+  const from = { r: 0x11, g: 0x1f, b: 0x30 };
+  const to = { r: 0x22, g: 0xc5, b: 0x5e };
   const r = Math.round(from.r + (to.r - from.r) * t);
   const g = Math.round(from.g + (to.g - from.g) * t);
   const b = Math.round(from.b + (to.b - from.b) * t);
@@ -31,6 +44,8 @@ export function ElectionMap() {
   const [units, setUnits] = useState<UnitGeoFeature[]>([]);
   const [points, setPoints] = useState<PollingCenterPoint[]>([]);
   const [loading, setLoading] = useState(true);
+  const [layer, setLayer] = useState<"voters" | "turnout">("voters");
+  const [turnoutByUnit, setTurnoutByUnit] = useState<Record<string, number>>({});
 
   const current = trail[trail.length - 1];
 
@@ -52,6 +67,11 @@ export function ElectionMap() {
     fetchPollingCenterPoints().then(setPoints);
   }, []);
 
+  useEffect(() => {
+    if (layer !== "turnout") return;
+    fetchTurnoutByUnit(current.depth).then(setTurnoutByUnit);
+  }, [layer, current.depth]);
+
   const maxVoters = useMemo(
     () => Math.max(1, ...units.map((u) => u.registeredVoters)),
     [units]
@@ -72,24 +92,37 @@ export function ElectionMap() {
   );
 
   function styleFeature(feature?: GeoJSON.Feature) {
-    const registeredVoters = (feature?.properties?.registeredVoters as number) ?? 0;
+    const props = feature?.properties as { id: string; registeredVoters: number } | undefined;
+    if (layer === "turnout") {
+      const turnoutPct = props ? turnoutByUnit[props.id] : undefined;
+      return {
+        fillColor: turnoutPct !== undefined ? colorForTurnout(turnoutPct) : "#334155",
+        fillOpacity: 0.65,
+        color: "#22C55E",
+        weight: 1,
+      };
+    }
     return {
-      fillColor: colorFor(registeredVoters, maxVoters),
+      fillColor: colorForVoters(props?.registeredVoters ?? 0, maxVoters),
       fillOpacity: 0.65,
       color: "#2F80ED",
       weight: 1,
     };
   }
 
-  function onEachFeature(feature: GeoJSON.Feature, layer: Layer) {
+  function onEachFeature(feature: GeoJSON.Feature, layerRef: Layer) {
     const props = feature.properties as { id: string; name: string; registeredVoters: number; pollingStationCount: number };
-    layer.bindPopup(
+    const turnoutPct = turnoutByUnit[props.id];
+    layerRef.bindPopup(
       `<strong>${props.name}</strong><br/>${props.registeredVoters.toLocaleString(
         "en-US"
-      )} registered voters<br/>${props.pollingStationCount} polling station(s)`
+      )} registered voters<br/>${props.pollingStationCount} polling station(s)` +
+        (layer === "turnout" && turnoutPct !== undefined
+          ? `<br/>${turnoutPct.toFixed(1)}% turnout (reporting stations only)`
+          : "")
     );
     if (current.depth < 2) {
-      layer.on("click", (e: LeafletMouseEvent) => {
+      layerRef.on("click", (e: LeafletMouseEvent) => {
         e.target.closePopup();
         setTrail([...trail, { depth: current.depth + 1, parentId: props.id, label: props.name }]);
       });
@@ -111,10 +144,23 @@ export function ElectionMap() {
             </button>
           </span>
         ))}
+        <div className="ml-auto flex items-center gap-1 rounded-md bg-white/5 p-1">
+          <button
+            onClick={() => setLayer("voters")}
+            className={layer === "voters" ? "rounded bg-accent px-2 py-1 text-xs text-white" : "rounded px-2 py-1 text-xs text-neutral"}
+          >
+            Registered Voters
+          </button>
+          <button
+            onClick={() => setLayer("turnout")}
+            className={layer === "turnout" ? "rounded bg-success px-2 py-1 text-xs text-white" : "rounded px-2 py-1 text-xs text-neutral"}
+          >
+            Turnout
+          </button>
+        </div>
         {trail.length > 1 && (
           <Button
             variant="ghost"
-            className="ml-auto"
             onClick={() => setTrail([{ depth: 0, label: "All Regions" }])}
           >
             Reset to national view
@@ -160,7 +206,9 @@ export function ElectionMap() {
       <p className="text-xs text-neutral">
         {loading
           ? "Loading…"
-          : `Showing ${units.length} ${LEVEL_LABELS[current.depth].toLowerCase()}${units.length === 1 ? "" : "s"}. Click a shape to drill down. Green dots are polling centers.`}
+          : `Showing ${units.length} ${LEVEL_LABELS[current.depth].toLowerCase()}${units.length === 1 ? "" : "s"}, colored by ${
+              layer === "turnout" ? "turnout (reporting stations only)" : "registered voters"
+            }. Click a shape to drill down. Green dots are polling centers.`}
       </p>
     </div>
   );
