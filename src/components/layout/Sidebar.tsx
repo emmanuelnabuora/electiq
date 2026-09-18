@@ -12,9 +12,24 @@ import {
   UsersRound,
   ScrollText,
   Settings,
+  Plug,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/**
+ * "Audit Logs" and "Settings" point at their real, working locations
+ * under /command-center/* rather than the /audit-logs and /settings
+ * paths this list originally had -- those two paths were never built
+ * as canonical routes (Audit Logs and System Settings/Security remain
+ * genuinely out of scope for the Screens 1-7 redesign, per
+ * RELEASE_READINESS.md's Phase II backlog), so the original entries
+ * were dead links that 404'd. Confirmed directly rather than assumed:
+ * neither /audit-logs nor /settings exists anywhere in src/app.
+ *
+ * "API Management" was missing from this list entirely -- this sidebar
+ * was written during Screen 1, before Screen 7 built the real
+ * /api-management route, and was never revisited to add it.
+ */
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Elections", href: "/elections", icon: Vote },
@@ -23,8 +38,9 @@ const NAV_ITEMS = [
   { label: "Incidents", href: "/incidents", icon: ShieldAlert },
   { label: "Integrity", href: "/integrity", icon: ShieldCheck },
   { label: "Users & Roles", href: "/users", icon: UsersRound },
-  { label: "Audit Logs", href: "/audit-logs", icon: ScrollText },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "API Management", href: "/api-management", icon: Plug },
+  { label: "Audit Logs", href: "/command-center/audit-logs", icon: ScrollText },
+  { label: "Settings", href: "/command-center/security", icon: Settings },
 ];
 
 export function Sidebar() {
