@@ -23,17 +23,24 @@ const config: Config = {
         // existing dark-navy tokens above, which the original
         // /command-center pages still depend on unchanged.
         "eiq-sidebar": "#071827",
+        "eiq-navy-900": "#0B2239",
         "eiq-sidebar-hover": "#10283A",
         "eiq-sidebar-active": "#16364E",
         "eiq-text-primary": "#102033",
         "eiq-text-secondary": "#64748B",
+        "eiq-text-muted": "#94A3B8",
         "eiq-bg": "#F5F7FA",
         "eiq-card": "#FFFFFF",
         "eiq-border": "#E5EAF0",
         "eiq-blue": "#2563EB",
+        "eiq-blue-hover": "#1D4ED8",
+        "eiq-blue-light": "#EFF6FF",
         "eiq-success": "#22C55E",
+        "eiq-success-light": "#DCFCE7",
         "eiq-warning": "#F59E0B",
+        "eiq-warning-light": "#FEF3C7",
         "eiq-critical": "#EF4444",
+        "eiq-critical-light": "#FEE2E2",
         "eiq-info": "#3B82F6",
         // Public Portal design system (Screen 8) -- its own distinct
         // "pub-" prefix, since its exact values (success, text colors)
