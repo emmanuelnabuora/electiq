@@ -45,3 +45,41 @@ export async function getResultDocument(id: string) {
   const decrypted = decryptBuffer(Buffer.from(doc.content));
   return { ...doc, content: new Uint8Array(decrypted) };
 }
+
+/**
+ * Same content-addressed, encrypted-at-rest pattern as
+ * storeResultDocument -- candidate nomination paperwork (proof of
+ * eligibility, party endorsement letters) can carry sensitive personal
+ * information, so it gets the same treatment as result evidence
+ * rather than a lighter-weight path just because it's a different
+ * entity type.
+ */
+export async function storeCandidateDocument(params: {
+  candidateId: string;
+  fileName: string;
+  mimeType: string;
+  bytes: Buffer;
+  uploadedById?: string;
+}) {
+  const sha256 = sha256HexBuffer(params.bytes);
+  const encrypted = encryptBuffer(params.bytes);
+
+  return db.candidateDocument.create({
+    data: {
+      candidateId: params.candidateId,
+      fileName: params.fileName,
+      mimeType: params.mimeType,
+      sizeBytes: params.bytes.byteLength,
+      sha256,
+      content: new Uint8Array(encrypted),
+      uploadedById: params.uploadedById,
+    },
+  });
+}
+
+export async function getCandidateDocument(id: string) {
+  const doc = await db.candidateDocument.findUnique({ where: { id } });
+  if (!doc) return null;
+  const decrypted = decryptBuffer(Buffer.from(doc.content));
+  return { ...doc, content: new Uint8Array(decrypted) };
+}

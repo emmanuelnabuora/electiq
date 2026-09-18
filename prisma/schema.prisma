@@ -63,6 +63,7 @@ model User {
   submittedResults  ResultSubmission[]     @relation("ResultSubmitter")
   verifications     ResultVerification[]   @relation("ResultVerifier")
   uploadedDocuments ResultDocument[]       @relation("ResultDocumentUploader")
+  uploadedCandidateDocuments CandidateDocument[] @relation("CandidateDocumentUploader")
   assignedAlerts    IntegrityAlert[]       @relation("IntegrityAlertAssignee")
   observerProfile   Observer?
   sessions          UserSession[]
@@ -196,6 +197,7 @@ model AdministrativeUnit {
   pollingCenters PollingCenter[]
   userScopes     UserScope[]
   importErrors   ImportError[]
+  partyCoverage  PartyGeographicCoverage[]
 
   @@unique([levelId, code])
   @@map("administrative_units")
@@ -345,11 +347,49 @@ model Party {
   abbreviation String
   colorHex   String?
 
+  // Real registration lifecycle -- added because the approved Parties
+  // screen design called for a registration status, and no such field
+  // existed. A party must be REGISTERED before its candidates can be
+  // marked APPROVED (enforced in updateCandidateNominationStatus).
+  registrationStatus PartyRegistrationStatus @default(PENDING)
+
   election   Election    @relation(fields: [electionId], references: [id], onDelete: Cascade)
   candidates Candidate[]
+  coverage   PartyGeographicCoverage[]
 
   @@unique([electionId, abbreviation])
   @@map("parties")
+}
+
+// Which top-level administrative units (counties/regions) a party is
+// actually registered to contest in -- real, explicit data a national
+// election authority tracks (a regional party may only contest in a
+// handful of counties), not something derivable from candidates, since
+// ElectionPosition itself is national-level in this schema (a
+// "President" or "MP" position has no per-seat geographic scope here).
+model PartyGeographicCoverage {
+  id      String @id @default(cuid())
+  partyId String
+  unitId  String
+
+  party Party              @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  unit  AdministrativeUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([partyId, unitId])
+  @@map("party_geographic_coverage")
+}
+
+enum NominationStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
+enum PartyRegistrationStatus {
+  PENDING
+  REGISTERED
+  SUSPENDED
 }
 
 model Candidate {
@@ -367,12 +407,49 @@ model Candidate {
   // already hosted.
   photoUrl   String?
 
-  election Election         @relation(fields: [electionId], references: [id], onDelete: Cascade)
-  position ElectionPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
-  party    Party?           @relation(fields: [partyId], references: [id])
-  results  CandidateResult[]
+  // Real nomination vetting lifecycle -- added because the approved
+  // Candidates screen design called for it, and it did not exist
+  // anywhere in the schema. Rather than fabricate it as a display-only
+  // label, this is a genuine field with a genuine transition action
+  // (updateCandidateNominationStatus), gated the same way every other
+  // election-management action in this app is, and audit-logged.
+  // "Ballot readiness" from the same design is deliberately NOT a
+  // second, separately-set field here -- it's derived (APPROVED = 
+  // ready, everything else = not) rather than a second flag that could
+  // silently drift out of sync with the nomination decision itself.
+  nominationStatus NominationStatus @default(PENDING_REVIEW)
+  nominationNotes  String?
+
+  election  Election            @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  position  ElectionPosition    @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  party     Party?              @relation(fields: [partyId], references: [id])
+  results   CandidateResult[]
+  documents CandidateDocument[]
 
   @@map("candidates")
+}
+
+// Real nomination-paperwork uploads for a candidate (e.g. a nomination
+// form, a proof-of-eligibility letter, a party endorsement). Same
+// content-addressed pattern as ResultDocument (see src/lib/evidence.ts)
+// -- the file's own bytes and a computed SHA-256 are what get stored
+// and verified, never the filename alone.
+model CandidateDocument {
+  id           String   @id @default(cuid())
+  candidateId  String
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
+  sha256       String
+  content      Bytes
+  uploadedById String?
+  uploadedAt   DateTime @default(now())
+
+  candidate  Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  uploadedBy User?     @relation("CandidateDocumentUploader", fields: [uploadedById], references: [id])
+
+  @@index([candidateId])
+  @@map("candidate_documents")
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -819,6 +896,7 @@ enum AuditAction {
   RESULT_APPROVED
   RESULT_PUBLISHED
   RESULT_DOCUMENT_UPLOADED
+  CANDIDATE_DOCUMENT_UPLOADED
   INTEGRITY_ALERT_CREATED
   INTEGRITY_ALERT_ASSIGNED
   INTEGRITY_ALERT_RESOLVED
