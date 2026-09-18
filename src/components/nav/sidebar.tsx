@@ -66,10 +66,14 @@ const sections: NavSection[] = [
   {
     title: "Intelligence",
     items: [
-      { label: "Analytics", href: "/command-center/analytics", icon: BarChart3 },
-      { label: "ElectIQ Copilot", href: "/command-center/copilot", icon: Sparkles },
+      { label: "Analytics", href: "/analytics", icon: BarChart3 },
+      { label: "ElectIQ Copilot", href: "/copilot", icon: Sparkles },
       { label: "Integrity Alerts", href: "/integrity", icon: ShieldAlert },
-      { label: "Historical Analytics", href: "/command-center/analytics", icon: History },
+      // Historical Analytics (master spec Screen 14, its own
+      // /analytics/historical route) is not built as a distinct screen
+      // yet -- pointed at the same real /analytics page for now rather
+      // than left as a dead link to the old, now-redirecting route.
+      { label: "Historical Analytics", href: "/analytics", icon: History },
       { label: "Scenario Lab", href: "/command-center/scenarios", icon: FlaskConical },
     ],
   },

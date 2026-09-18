@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 const EXAMPLE_QUERIES = [
-  "Which constituencies have not reported?",
-  "Show regions with the lowest turnout.",
-  "Summarize open incidents.",
+  "What is the current turnout in Nairobi?",
+  "Which constituencies have not fully reported?",
+  "Summarize unresolved incidents.",
   "Which polling stations require verification?",
-  "Generate the national situation report.",
+  "Show reporting progress by county.",
+  "Generate an election situation summary.",
 ];
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
