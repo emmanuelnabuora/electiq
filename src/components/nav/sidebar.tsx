@@ -8,6 +8,7 @@ import {
   BarChart3,
   Radar,
   ShieldAlert,
+  MapPinned,
   Eye,
   ClipboardList,
   Sparkles,
@@ -56,6 +57,7 @@ const sections: NavSection[] = [
   {
     title: "Operations",
     items: [
+      { label: "Field Operations", href: "/field-operations", icon: MapPinned },
       { label: "Incidents", href: "/incidents", icon: ShieldAlert },
       { label: "Observers", href: "/field-operations/assignments", icon: Eye },
       { label: "Field Reports", href: "/field-operations/assignments", icon: ClipboardList },
