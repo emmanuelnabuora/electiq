@@ -70,6 +70,7 @@ export default async function ElectionsPage({
       cell: (e) =>
         e.positions.length > 0 ? e.positions.map((p) => p.name).join(", ") : "—",
     },
+    { header: "Country", cell: (e) => e.country.name },
     {
       header: "Status",
       cell: (e) => (
@@ -83,6 +84,8 @@ export default async function ElectionsPage({
       header: "Election Date",
       cell: (e) => e.electionDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }),
     },
+    { header: "Parties", cell: (e) => e._count.parties },
+    { header: "Candidates", cell: (e) => e._count.candidates },
     {
       header: "Actions",
       cell: (e) => (

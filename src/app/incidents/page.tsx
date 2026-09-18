@@ -75,7 +75,12 @@ export default async function IncidentsPage({
     },
     {
       header: "Location",
-      cell: (i) => i.pollingStation?.pollingCenter.unit.name ?? "—",
+      cell: (i) => (
+        <div>
+          <p>{i.pollingStation?.pollingCenter.unit.name ?? "—"}</p>
+          {i.pollingStation && <p className="text-xs text-eiq-text-secondary">{i.pollingStation.code}</p>}
+        </div>
+      ),
     },
     {
       header: "Severity",

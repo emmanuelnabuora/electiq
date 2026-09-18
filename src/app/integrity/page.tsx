@@ -16,15 +16,17 @@ const STATUS_TONE = { OPEN: "critical", UNDER_REVIEW: "warning", RESOLVED: "succ
 
 type AlertWithLocation = Awaited<ReturnType<typeof loadAlerts>>[number];
 
-async function loadAlerts(riskTab: string, scope: Awaited<ReturnType<typeof resolveUserScope>>) {
-  const where =
-    riskTab === "high"
+async function loadAlerts(riskTab: string, statusFilter: string, scope: Awaited<ReturnType<typeof resolveUserScope>>) {
+  const where = {
+    ...(riskTab === "high"
       ? { severity: { in: ["HIGH", "CRITICAL"] as ("HIGH" | "CRITICAL")[] } }
       : riskTab === "medium"
         ? { severity: "MEDIUM" as const }
         : riskTab === "low"
           ? { severity: "LOW" as const }
-          : {};
+          : {}),
+    ...(statusFilter !== "all" ? { status: statusFilter as "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "DISMISSED" } : {}),
+  };
 
   const alerts = await db.integrityAlert.findMany({ where, orderBy: { createdAt: "desc" }, take: 200 });
 
@@ -44,7 +46,7 @@ async function loadAlerts(riskTab: string, scope: Awaited<ReturnType<typeof reso
 export default async function IntegrityAlertsPage({
   searchParams: searchParamsPromise,
 }: {
-  searchParams: Promise<{ risk?: string }>;
+  searchParams: Promise<{ risk?: string; status?: string }>;
 }) {
   const searchParams = await searchParamsPromise;
   const session = await requireSession();
@@ -64,7 +66,8 @@ export default async function IntegrityAlertsPage({
 
   const scope = await resolveUserScope(userId);
   const riskTab = searchParams.risk ?? "all";
-  const alerts = await loadAlerts(riskTab, scope);
+  const statusFilter = searchParams.status ?? "all";
+  const alerts = await loadAlerts(riskTab, statusFilter, scope);
 
   const openCount = alerts.filter((a) => a.status === "OPEN").length;
   const criticalCount = alerts.filter((a) => a.severity === "CRITICAL" && a.status !== "RESOLVED" && a.status !== "DISMISSED").length;
@@ -83,7 +86,12 @@ export default async function IntegrityAlertsPage({
           {a.rule.replace(/_/g, " ")}
         </Link>
       ),
-      className: "max-w-md truncate px-4 py-3 text-eiq-text-primary",
+      className: "max-w-xs truncate px-4 py-3 text-eiq-text-primary",
+    },
+    {
+      header: "Explanation",
+      cell: (a) => a.explanation,
+      className: "max-w-md truncate px-4 py-3 text-eiq-text-secondary",
     },
     { header: "Location", cell: (a) => a.locationName ?? "—" },
     { header: "Detected", cell: (a) => a.createdAt.toLocaleString("en-US") },
@@ -122,6 +130,26 @@ export default async function IntegrityAlertsPage({
           { label: "High Risk", value: "high" },
           { label: "Medium Risk", value: "medium" },
           { label: "Low Risk", value: "low" },
+        ]}
+      />
+
+      {/*
+        Restored: the pre-redesign Integrity Alerts page filtered by
+        status (OPEN/UNDER_REVIEW/RESOLVED/DISMISSED) as its only filter.
+        The approved design's risk-tier tabs above were built as a
+        genuinely new, additional way to filter, not a replacement for
+        status filtering -- dropping it during the move would have been
+        exactly the kind of silent capability loss the redesign was
+        never supposed to cause.
+      */}
+      <FilterBar
+        param="status"
+        options={[
+          { label: "All Statuses", value: "all" },
+          { label: "Open", value: "OPEN" },
+          { label: "Under Review", value: "UNDER_REVIEW" },
+          { label: "Resolved", value: "RESOLVED" },
+          { label: "Dismissed", value: "DISMISSED" },
         ]}
       />
 
