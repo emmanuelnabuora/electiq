@@ -13,6 +13,8 @@ import {
   ScrollText,
   Settings,
   Plug,
+  Users2,
+  Flag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,10 +31,17 @@ import { cn } from "@/lib/utils";
  * "API Management" was missing from this list entirely -- this sidebar
  * was written during Screen 1, before Screen 7 built the real
  * /api-management route, and was never revisited to add it.
+ *
+ * "Candidates" and "Parties" added alongside "Elections" once those
+ * became real canonical screens with their own real backend
+ * (nomination status, party registration, geographic coverage) rather
+ * than only reachable via the election detail page.
  */
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Elections", href: "/elections", icon: Vote },
+  { label: "Candidates", href: "/elections/candidates", icon: Users2 },
+  { label: "Parties", href: "/elections/parties", icon: Flag },
   { label: "Results", href: "/results", icon: BarChart3 },
   { label: "Field Operations", href: "/field-operations", icon: MapPinned },
   { label: "Incidents", href: "/incidents", icon: ShieldAlert },

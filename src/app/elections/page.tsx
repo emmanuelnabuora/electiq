@@ -101,15 +101,23 @@ export default async function ElectionsPage({
       <PageHeader
         title="Elections"
         actions={
-          canCreate ? (
-            <Link
-              href="/elections/new"
-              className="flex items-center gap-1.5 rounded-md bg-eiq-blue px-3 py-2 text-sm font-medium text-white"
-            >
-              <Plus className="h-4 w-4" />
-              Create Election
+          <div className="flex items-center gap-3">
+            <Link href="/elections/candidates" className="text-sm font-medium text-eiq-blue">
+              Candidates
             </Link>
-          ) : undefined
+            <Link href="/elections/parties" className="text-sm font-medium text-eiq-blue">
+              Parties
+            </Link>
+            {canCreate ? (
+              <Link
+                href="/elections/new"
+                className="flex items-center gap-1.5 rounded-md bg-eiq-blue px-3 py-2 text-sm font-medium text-white"
+              >
+                <Plus className="h-4 w-4" />
+                Create Election
+              </Link>
+            ) : undefined}
+          </div>
         }
       />
       <FilterBar
