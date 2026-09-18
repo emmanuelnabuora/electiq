@@ -1,89 +1,146 @@
 # ElectIQ
 
-AI-powered election intelligence, observation, integrity, and analytics platform.
-This repository currently implements **Sprint 1 — Platform Foundation** of the
-12-sprint roadmap described in the master build prompt.
+AI-powered election intelligence, observation, integrity, and analytics
+platform. Built across 12 sprints plus a real-data integration phase
+(Kenya's official IEBC voter register) and a full internal + public UI
+redesign (Screens 1–7 plus a consolidation pass).
+
+**For current architecture, canonical routes, completed functionality,
+security posture, and known limitations, see [`RELEASE_READINESS.md`](./RELEASE_READINESS.md)
+— that document is the authoritative, up-to-date summary. This README
+covers setup and general orientation; `SPRINT_01.md` through
+`SPRINT_13.md` are point-in-time historical records of each sprint as it
+was built and are not updated retroactively when later work changes
+something they describe (a route moving in a later redesign pass, for
+example) — treat them as history, not current-state documentation.**
 
 ## Product overview
 
 ElectIQ is a politically neutral, secure, auditable, multi-country election
-intelligence platform. Sprint 1 establishes the foundation everything else is
-built on: authentication, server-side RBAC with geographic scoping, the
-multi-country geography/election data model, the audit architecture, and the
-Command Center application shell.
+intelligence platform: authentication and server-side RBAC with geographic
+scoping, election configuration, a full results submission/verification/
+publication workflow, field operations (observer assignments, check-ins,
+incident reporting), integrity alerting, a public results portal, and an
+administrative layer for users, roles, permissions, and API keys.
 
-Nothing in this sprint fabricates election data in the UI — every number
-shown in the Command Center is a live database query. Features that don't
-exist yet (Results Engine, Integrity Alerts, Copilot, etc.) are shown in the
-sidebar tagged with the sprint that implements them, rather than as dead
-links or fake buttons.
+Nothing in this app fabricates election data in the UI — every number
+shown anywhere is a live database query, and every public-facing figure is
+explicitly scoped to `PUBLISHED` results only (verified with dedicated
+tests, not just by convention).
+
+The app currently runs **two coexisting visual themes** on purpose, not by
+accident: a newer light theme (Screens 1–7 of an approved redesign, plus
+the public portal) at a set of canonical top-level routes, and an older
+dark theme at `/command-center/*` for features not yet part of that
+redesign (Polling Stations, Turnout, Election Map, Analytics, ElectIQ
+Copilot, Historical Analytics, Scenario Lab, Audit Logs, Reports, System
+Settings). Every route that moved during the redesign has a real
+`redirect()` at its old location — see `RELEASE_READINESS.md` for the
+full canonical route list and which old routes redirect where.
 
 ## Architecture
 
-- **Frontend**: Next.js 14 (App Router), React, TypeScript, Tailwind CSS
-- **Backend**: Next.js server components, server actions, and route handlers
-- **Database**: PostgreSQL, accessed through Prisma ORM 7 (see "About the
-  Prisma setup" below)
-- **Auth**: NextAuth (Auth.js) v4, credentials provider, JWT sessions
+- **Frontend**: Next.js 15 (App Router), React, TypeScript, Tailwind CSS —
+  two coexisting design token sets (`eiq-*` for the internal redesign,
+  `pub-*` for the public portal), see `tailwind.config.ts`
+- **Backend**: Next.js server components, server actions, and route
+  handlers
+- **Database**: PostgreSQL 16 + PostGIS 3.4, accessed through Prisma ORM 7
+  (driver-adapter based — see "About the Prisma setup" below)
+- **Auth**: NextAuth (Auth.js) v4, credentials provider, JWT sessions,
+  MFA (TOTP) support
 - **Authorization**: custom RBAC + geographic-scope resolver
-  (`src/lib/rbac.ts`) — enforced server-side only, never via UI hiding
-- **Audit**: a single `recordAudit()` service (`src/lib/audit.ts`) that every
-  security-relevant action writes through
+  (`src/lib/rbac.ts`) — enforced server-side only, never via UI hiding.
+  `src/middleware.ts` provides a first-line-of-defense redirect for every
+  canonical route; every individual page also calls
+  `requireSession()`/`authorize()` itself, which is the actual security
+  boundary
+- **Audit**: a single `recordAudit()` service (`src/lib/audit.ts`), with a
+  tamper-evident SHA-256 hash chain, that every security-relevant action
+  writes through
+- **Maps**: Leaflet + OpenStreetMap tiles (no paid API token required) —
+  used for the internal Election Map, the Field Operations map, and the
+  Public Portal's Kenya county map (which currently shows an honest
+  "boundary data unavailable" state — no real Kenya county GeoJSON has
+  been sourced yet; see `RELEASE_READINESS.md`)
+
+## Canonical routes (post-redesign)
+
+| Route | Purpose |
+|---|---|
+| `/dashboard` | Main authenticated dashboard |
+| `/elections`, `/elections/[id]`, `/elections/new` | Election management |
+| `/results`, `/results/submissions*` | Results dashboard + submission workflow |
+| `/field-operations`, `/field-operations/assignments` | Field ops map + assignment management |
+| `/incidents`, `/incidents/[id]`, `/incidents/new` | Incident management |
+| `/integrity`, `/integrity/[id]` | Integrity alerts |
+| `/users`, `/users/roles`, `/users/permissions` | User/role/permission administration |
+| `/api-management` | Public API key management |
+| `/public` | Unauthenticated public results portal |
+
+Every corresponding old `/command-center/*` route now redirects here.
+Features not yet part of the redesign remain at their original
+`/command-center/*` location (see the Product overview section above).
 
 ## Repository structure
 
 ```
 prisma/
-  schema.prisma          Data model (Sprint 1 + Sprint 2)
-  seed.ts                RBAC catalog + Election Management System synthetic data + GIS boundaries
-  migrations/             Hand-authored + Prisma-verified SQL migrations
+  schema.prisma          Full data model
+  seed.ts                RBAC catalog + demo synthetic data + GIS boundaries
+  migrations/             Hand-authored + Prisma-verified SQL migrations (12 as of this writing)
+scripts/                  One-off data scripts (Kenya import, renames, cleanups) — each documents
+                          its own purpose and usage at the top of the file
 src/
   app/
-    login/                Login page
-    command-center/        Protected app shell + Command Center V1
-      elections/            Elections list, wizard, detail page
-      polling-stations/      Polling stations list + CSV import
-      election-map/           Interactive GIS map
+    dashboard/            Canonical dashboard (Screen 1)
+    elections/, results/, field-operations/, incidents/, integrity/,
+    users/, api-management/    Canonical routes for Screens 2-7
+    public/                Public results portal (unauthenticated)
+    command-center/        Legacy dark-theme shell: both real not-yet-migrated
+                          features AND redirect-only stubs for migrated ones
+    api/public/             Public API routes (PUBLISHED-only, explicit DTOs)
     api/auth/[...nextauth]/ NextAuth route handler
     api/health/             DB health check
   components/
-    ui/                    Button, Card, Input, Label, Badge primitives
-    nav/                   Sidebar, sign-out button
-    command-center/         KPI card
-    elections/              Election Setup Wizard (client)
-    import/                 CSV import upload/preview/confirm flow (client)
-    map/                    Leaflet election map (client)
+    layout/                 New light-theme shell (AppShell, Sidebar, TopBar, PageHeader)
+    ui-v2/                  New light-theme UI primitives (StatCard, DataTable, StatusBadge, ...)
+    public/                 Public portal components
+    ui/, nav/               Original dark-theme primitives and shell (still used by
+                          not-yet-migrated /command-center pages)
   lib/
     db.ts                  Prisma client singleton (driver-adapter based)
-    auth.ts                NextAuth config: credentials, lockout, audit
+    auth.ts                NextAuth config: credentials, MFA, lockout, audit
     rbac.ts                Permission + geographic scope resolution
-    audit.ts               Central audit log writer
+    audit.ts               Central audit log writer (hash chain)
     session.ts             Server-side session helpers
-    gis.ts                 PostGIS raw-SQL read/write helpers
-    actions/                Server actions: elections, geography, import, gis
-    import/                 CSV parsing + validation (polling stations)
-  generated/prisma/         Generated Prisma Client (run `npm run prisma:generate`)
-tests/
-  rbac.test.ts             Permission + geographic-scope-violation tests
-  import.test.ts           CSV import validation tests
-  audit.test.ts            Audit generation tests
+    gis.ts                 PostGIS raw-SQL read/write helpers, country-scoped
+    public/                Public Portal data layer (PUBLISHED-only queries, rate limiting)
+    actions/                Server actions, one file per domain
+tests/                     Vitest suite -- RBAC, geographic-scope violations, results
+                          aggregation, the public-portal security boundary, and more
 ```
 
 ## Setup
 
+**Set up your environment file before running `npm install`** — the
+`postinstall` script runs `prisma generate`, which needs `DATABASE_URL` to
+already be set; installing before configuring `.env` will fail.
+
 ```bash
+cp .env.example .env             # then fill in DATABASE_URL and the other variables below
 npm install
-docker compose up -d db      # or point DATABASE_URL at your own Postgres
-npx prisma migrate dev       # applies prisma/migrations/ (includes PostGIS extension)
-npm run seed                 # RBAC catalog + Election Management System synthetic data + GIS boundaries
+docker compose up -d db          # or point DATABASE_URL at your own Postgres
+npx prisma migrate deploy        # applies prisma/migrations/ (includes PostGIS extension)
+npm run seed                     # RBAC catalog + demo synthetic data + GIS boundaries
 npm run dev
 ```
 
 Visit `http://localhost:3000`, sign in with any demo account below, and
-you'll land on the Command Center. Postgres needs the PostGIS extension
-available (the `postgis` Docker image variant, or `postgresql-*-postgis-3`
-if managing your own instance) — the migration runs `CREATE EXTENSION IF
-NOT EXISTS postgis`, but the extension's files must exist on the server.
+you'll land on `/dashboard`. Postgres needs the PostGIS extension available
+(the `postgis` Docker image variant, or `postgresql-*-postgis-3` if
+managing your own instance) — the migration runs `CREATE EXTENSION IF NOT
+EXISTS postgis`, but the extension's files must exist on the server.
 
 Generate an `EVIDENCE_ENCRYPTION_KEY` before first run (required — see
 Environment variables below):
@@ -91,9 +148,32 @@ Environment variables below):
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
+**A known gotcha in network-restricted environments** (some CI runners,
+sandboxes, or locked-down corporate networks): `prisma generate`,
+`prisma validate`, and `prisma migrate *` all try to download a
+schema-engine binary from `binaries.prisma.sh` the first time they run in
+an environment. If that domain is blocked, these commands fail with a
+403/checksum error. Two ways around it:
+- Ensure outbound access to `binaries.prisma.sh` (the normal fix for most
+  developers)
+- If you genuinely cannot reach it, apply `prisma/migrations/*/migration.sql`
+  files directly against your database in filename order with `psql`
+  instead of `prisma migrate deploy` — this was verified to work
+  identically (all 12 migrations apply cleanly, `npm run seed` succeeds
+  against the result) as part of this project's own release verification.
+  `prisma generate` (client generation) still needs to run afterward for
+  the app to build; if it can't reach `binaries.prisma.sh` either, only
+  the schema-engine binary is unavailable, not the generated client itself
+  — Prisma will use its bundled `@prisma/schema-engine-wasm` fallback in
+  supported cases, but if you hit a hard failure regardless, generating
+  the client from an environment with normal internet access and
+  committing/copying the resulting `src/generated/prisma/` directory is
+  the last-resort workaround.
+
 `npm run sbom` regenerates `sbom.json` (a real CycloneDX Software Bill of
 Materials); `npm run audit` runs `npm audit` for a real dependency
-vulnerability scan. See `SPRINT_11.md` for the current disclosed findings.
+vulnerability scan. See `RELEASE_READINESS.md` for the current disclosed
+findings.
 
 ## Environment variables
 
@@ -107,27 +187,36 @@ Copy `.env.example` to `.env` and fill in:
 
 ## Database & migrations
 
-The schema lives in `prisma/schema.prisma`. Three migrations, each authored
-by hand and then **verified by actually applying it to a running
-PostgreSQL 16 + PostGIS 3.4 instance** (column-by-column diffing, and for
-the GIS columns, real `ST_AsText`/`ST_AsGeoJSON` round-trip checks) because
-this development sandbox could not reach Prisma's binary CDN (see "About
-the Prisma setup"):
+The schema lives in `prisma/schema.prisma`. 12 migrations as of this
+writing, each authored by hand and verified by actually applying it to a
+running PostgreSQL 16 + PostGIS 3.4 instance:
 
-- `20260910000000_init` — Sprint 1 foundation schema
+- `20260910000000_init` — foundation schema
 - `20260911000000_sprint2_geo_import` — PostGIS extension + geometry
   columns + bulk import tracking tables + new audit actions
-- `20260911010000_import_raw_rows` — adds `ImportJob.rawRows` (a small
-  follow-up once the import flow's design settled on persisting parsed rows
-  between preview and confirm)
+- `20260911010000_import_raw_rows` — adds `ImportJob.rawRows`
+- `20260912000000_sprint3_results_engine` — results submission/verification/
+  publication workflow
+- `20260913000000_sprint5_integrity` — integrity alerts
+- `20260914000000_sprint6_field_operations` — field assignments, reports,
+  incidents
+- `20260915000000_sprint7_copilot` — AI Copilot conversation history
+- `20260917000000_sprint9_scenarios` — scenario modeling
+- `20260918000000_sprint11_security` — MFA, session tracking, encryption
+- `20260919000000_sprint13_user_admin` — user activation/deactivation audit
+  actions
+- `20260920000000_sprint13_api_keys` — public API key management
+- `20260921000000_candidate_photos` — candidate profile photos
 
-Once you run `npx prisma migrate dev` in an environment with normal
-internet access, Prisma will read these migrations and treat the database
-as up to date — you do not need to redo anything.
+Run `npx prisma migrate deploy` in an environment with normal internet
+access and Prisma will apply whichever of these aren't yet applied. See
+the network-restricted-environment note under Setup above if that command
+can't reach `binaries.prisma.sh`.
 
 ## Seed data — Election Management System
 
 `npm run seed` creates a fictional synthetic environment:
+
 
 - **Country**: Election Management System
 - **Election**: Election Management System General Election 2026 (Oct 12, 2026), status `CONFIGURED`
@@ -270,17 +359,24 @@ Evidence documents get a computed SHA-256 and are stored in Postgres
 behind `src/lib/evidence.ts`, a narrow interface a real S3-compatible swap
 would use.
 
-## Live Command Center (Sprint 4)
+## Live Command Center (Sprint 4, superseded by the redesign)
 
-`GET /api/command-center` is a dedicated, permission-gated snapshot
-endpoint returning candidate standings, regional/constituency breakdowns,
-and a reporting trend — all computed fresh from the database on every
-request, nothing cached or simulated. The Command Center page polls it
-every 20 seconds via `src/components/command-center/live-results-panel.tsx`
-and renders it with Recharts. These figures are explicitly labeled
-provisional/unverified in the UI, since they include everything reported
-so far, not only published results — see `SPRINT_04.md` for why that's a
-deliberate reading of the neutrality requirement, not an oversight.
+Sprint 4 originally built this as `GET /api/command-center`, a
+permission-gated snapshot endpoint polled every 20 seconds by
+`src/components/command-center/live-results-panel.tsx`. Both the endpoint
+and that component were deleted during the Internal UI Consolidation
+Phase, once `/dashboard` (the canonical Screen 1) and `/results` (Screen
+3) fully superseded what they did — confirmed via a repository-wide search
+that nothing else referenced either before deleting them. The equivalent
+current functionality lives in `getResultsAggregate()`
+(`src/lib/results/aggregation.ts`) and `getCandidateStandings()`
+(`src/lib/results/candidate-standings.ts`), called directly by `/dashboard`
+and `/results` as server components rather than via a polled client-side
+API endpoint. These figures are explicitly labeled provisional/unverified
+in the UI, since they include everything reported so far, not only
+published results — a deliberate reading of the neutrality requirement,
+not an oversight.
+
 
 ## Election Integrity (Sprint 5)
 
@@ -489,16 +585,21 @@ Sprint 2 items:
   than dedicated top-level list pages; the sidebar links to both point
   there.
 
-## Project status — Sprint 12 of 12 complete
+## Project status
 
-The master spec's 12-sprint build is complete. See `SPRINT_01.md`
-through `SPRINT_12.md` for each sprint's detailed objective, scope, and
-verification record. **`SPRINT_12.md`'s "Production readiness review"
-section is the single best entry point** for understanding what's
-genuinely ready to deploy versus what remains — read it before deploying
-this anywhere real.
+The master spec's 12-sprint build, a Sprint 13 admin/security extension,
+a real-data integration phase (Kenya's official IEBC voter register), and
+a full internal + public UI redesign (Screens 1–7 plus a consolidation
+pass) are all complete. See `SPRINT_01.md` through `SPRINT_13.md` for
+each sprint's own point-in-time objective, scope, and verification
+record — these are historical and not updated retroactively.
 
-The Next.js vulnerability disclosed in Sprint 11 is now resolved: this
-app runs Next.js 15.5.24, the actually-correct patched version (Sprint
-11's original research pointed to 15.5.21, superseded by a second
-security release before this sprint applied it — see `SPRINT_12.md`).
+**[`RELEASE_READINESS.md`](./RELEASE_READINESS.md) is the current, single
+best entry point** for understanding what's genuinely ready to deploy
+versus what remains — read it before deploying this anywhere real.
+
+The Next.js vulnerability disclosed in Sprint 11 is resolved: this app
+runs Next.js 15.5.24, the actually-correct patched version. Current
+dependency vulnerability status is in `RELEASE_READINESS.md`, not
+repeated here since it changes independently of the app's own code.
+
