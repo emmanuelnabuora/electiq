@@ -79,7 +79,7 @@ export function PollingStationImport() {
           <p className="text-sm text-neutral">
             {result.created} polling station{result.created === 1 ? "" : "s"} created.
           </p>
-          <Button onClick={() => router.push("/command-center/polling-stations")}>
+          <Button onClick={() => router.push("/polling-stations")}>
             Back to Polling Stations
           </Button>
         </CardContent>
